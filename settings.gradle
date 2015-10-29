@@ -1,0 +1,3 @@
+include ':app', ':sudokuai'
+//include ':openCVLibrary'
+include ':libraries:opencv'
