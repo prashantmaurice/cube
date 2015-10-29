@@ -82,7 +82,7 @@ public class ImageParser {
         return GenUtils.convertMatToBitmap(mat);
     }
 
-    private Mat processMat(Mat src){
+    public Mat processMat(Mat src){
 
 
         Rectangle rect = getrectangle(src);
