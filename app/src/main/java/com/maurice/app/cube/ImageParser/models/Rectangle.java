@@ -1,6 +1,8 @@
 package com.maurice.app.cube.ImageParser.models;
 
 
+import com.maurice.app.cube.utils.Logg;
+
 import org.opencv.core.Point;
 
 /**
@@ -34,5 +36,9 @@ public class Rectangle {
         this.rt = new Point(width,0);
         this.lb = new Point(0,height);
         this.rb = new Point(width,height);
+    }
+
+    public void print() {
+        Logg.d("RECT","Points = lt:"+lt.toString()+" rt:"+rt.toString()+" lb:"+lb.toString()+" rb:"+rb.toString()+"");
     }
 }

@@ -139,4 +139,20 @@ public class GenUtils {
 
         return inSampleSize;
     }
+
+    public static Point findIntersection(LineSegment l1, LineSegment l2){
+        double x1 = l1.point1.x;
+        double x2 = l1.point2.x;
+        double x3 = l2.point1.x;
+        double x4 = l2.point2.x;
+        double y1 = l1.point1.y;
+        double y2 = l1.point2.y;
+        double y3 = l2.point1.y;
+        double y4 = l2.point2.y;
+        double x =  (((x1*y2-x2*y1)*(x3-x4))-((x3*y4-x4*y3)*(x1-x2)))/
+                (((x1-x2)*(y3-y4))-((y1-y2)*(x3-x4)));
+        double y =  (((x1*y2-x2*y1)*(y3-y4))-((x3*y4-x4*y3)*(y1-y2)))/
+                (((x1-x2)*(y3-y4)-(y1-y2)*(x3-x4)));
+        return new Point(x,y);
+    }
 }

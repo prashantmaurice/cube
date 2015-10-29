@@ -32,7 +32,7 @@ public class LineSegment {
 //        return Math.sqrt(((point1.x - point2.x) * (point1.x - point2.x)) + ((point1.y - point2.y) * (point1.y - point2.y)));
     }
     public double getAngle(){
-        return angle;
+        return angle+(Math.PI);
     }
 
 }

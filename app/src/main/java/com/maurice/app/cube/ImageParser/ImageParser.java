@@ -186,20 +186,56 @@ public class ImageParser {
 
         //Find lines
         ArrayList<LineSegment> segments = findLines(srcEdges);
+
+        //Filtered Line segments : filter from around 40 segements to final 4
+        ArrayList<LineSegment> filteredSegments = filterValidLineSegments(segments);
+
         Mat color = new Mat();
         Imgproc.cvtColor(srcGry, color, Imgproc.COLOR_GRAY2BGR);
-        for(LineSegment lineSegment : segments){
+        for(LineSegment lineSegment : filteredSegments){
             Imgproc.line(color, lineSegment.point1, lineSegment.point2, new Scalar(Math.random()*255, Math.random()*255,Math.random()*255), 5);
 //            Imgproc.line(color, lineSegment.point1, lineSegment.point2, new Scalar(200, 0,0), (int)units*10);
 ////            Imgproc.line(color, lineSegment.point1, lineSegment.point2, new Scalar(200,0,0), 1);
         }
 
-        MainActivity.setDebugImage(color,4);
+
+        //Find Bounding rectangle lines
+        Rectangle rect = findRectangleFromFourLines(filteredSegments);
+        rect.print();
+
+        //Draw Bounding Rectangle
+        for(int i=0;i<4;i++){
+            Imgproc.line(color, rect.lt, rect.lb, new Scalar(Math.random()*255, Math.random()*255,Math.random()*255), 5);
+            Imgproc.line(color, rect.lb, rect.rb, new Scalar(Math.random()*255, Math.random()*255,Math.random()*255), 5);
+            Imgproc.line(color, rect.rb, rect.rt, new Scalar(Math.random()*255, Math.random()*255,Math.random()*255), 5);
+            Imgproc.line(color, rect.rt, rect.lt, new Scalar(Math.random()*255, Math.random()*255,Math.random()*255), 5);
+        }
+
+
+        MainActivity.setDebugImage(color, 4);
 
 
 
         return new Rectangle(10);
     }
+
+    private Rectangle findRectangleFromFourLines(ArrayList<LineSegment> filteredSegments) {
+
+        Collections.sort(filteredSegments, new Comparator<LineSegment>() {
+            public int compare(LineSegment o1, LineSegment o2) {
+                return (int) (o2.getAngle() - o1.getAngle());
+            }
+        });
+
+        Point p1 = GenUtils.findIntersection(filteredSegments.get(0), filteredSegments.get(1));
+        Point p2 = GenUtils.findIntersection(filteredSegments.get(1), filteredSegments.get(2));
+        Point p3 = GenUtils.findIntersection(filteredSegments.get(2), filteredSegments.get(3));
+        Point p4 = GenUtils.findIntersection(filteredSegments.get(3), filteredSegments.get(0));
+
+        return new Rectangle(p1,p2,p4,p3);
+    }
+
+
 
 
 //    public Mat getdebug(Mat src){
@@ -425,7 +461,7 @@ public class ImageParser {
 //        Log.d(TAG, "Ratio :  "+ratio);
 
         //Find lines in the image
-        int threshold = 40;//The minimum number of intersections to “detect” a line
+        int threshold = 20;//The minimum number of intersections to “detect” a line
         int minLinelength = 20;//The minimum number of points that can form a line. Lines with less than this number of points are disregarded.
         int maxlineGap = 3;//The maximum gap between two points to be considered in the same line.
         Mat lines = new Mat();
@@ -480,16 +516,16 @@ public class ImageParser {
             }
         }
 
-        //remove segments that are not horizontal or vertical
-        for(int i=0;i<segments.size();i++){
-            double angle = Math.abs(GenUtils.getAngleFromradians(segments.get(i).getAngle()));
-            Logg.d(TAG, "Angle : " + angle);
-            if(rejectedIndices.contains(i)) continue;
-            if(angle<20) continue;
-            if(angle>70&&angle<110) continue;
-            if(angle>160&&angle<200) continue;
-            rejectedIndices.add(i);
-        }
+//        //remove segments that are not horizontal or vertical
+//        for(int i=0;i<segments.size();i++){
+//            double angle = Math.abs(GenUtils.getAngleFromradians(segments.get(i).getAngle()));
+//            Logg.d(TAG, "Angle : " + angle);
+//            if(rejectedIndices.contains(i)) continue;
+//            if(angle<20) continue;
+//            if(angle>70&&angle<110) continue;
+//            if(angle>160&&angle<200) continue;
+//            rejectedIndices.add(i);
+//        }
 
         //Finally add in filtered array
         for(int i=0;i<segments.size();i++){//find highest
