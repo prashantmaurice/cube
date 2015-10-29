@@ -16,7 +16,7 @@
             android:layout_height="match_parent"
             android:id="@+id/imageView"
             android:scaleType="fitCenter"
-            android:layout_weight="0.5" />
+            android:src="@android:drawable/ic_partial_secure" />
 
         <TextView
             android:layout_width="wrap_content"
@@ -37,7 +37,7 @@
                 android:id="@+id/imageView2"
                 android:scaleType="fitCenter"
                 android:layout_weight="1"
-                android:src="@drawable/sample3"
+                android:src="@android:drawable/ic_partial_secure"
                 android:layout_margin="1dp" />
 
             <ImageView
@@ -46,7 +46,7 @@
                 android:id="@+id/imageView3"
                 android:layout_weight="1"
                 android:scaleType="fitCenter"
-                android:src="@drawable/sample3"
+                android:src="@android:drawable/ic_partial_secure"
                 android:layout_margin="1dp" />
 
         </LinearLayout>
@@ -94,7 +94,7 @@
                 android:id="@+id/imageView5"
                 android:layout_weight="1"
                 android:scaleType="fitCenter"
-                android:src="@drawable/sample3"
+                android:src="@android:drawable/ic_partial_secure"
                 android:layout_margin="1dp" />
         </LinearLayout>
 
@@ -132,7 +132,7 @@
                 android:id="@+id/imageView6"
                 android:layout_weight="1"
                 android:scaleType="fitCenter"
-                android:src="@drawable/sample2"
+                android:src="@android:drawable/ic_partial_secure"
                 android:layout_margin="1dp" />
 
             <ImageView
@@ -141,7 +141,7 @@
                 android:id="@+id/imageView7"
                 android:layout_weight="1"
                 android:scaleType="fitCenter"
-                android:src="@drawable/sample3"
+                android:src="@android:drawable/ic_partial_secure"
                 android:layout_margin="1dp" />
         </LinearLayout>
 
@@ -179,7 +179,7 @@
                 android:id="@+id/imageView8"
                 android:layout_weight="1"
                 android:scaleType="fitCenter"
-                android:src="@drawable/sample2"
+                android:src="@android:drawable/ic_partial_secure"
                 android:layout_margin="1dp" />
 
             <ImageView
@@ -188,7 +188,7 @@
                 android:id="@+id/imageView9"
                 android:layout_weight="1"
                 android:scaleType="fitCenter"
-                android:src="@drawable/sample3"
+                android:src="@android:drawable/ic_partial_secure"
                 android:layout_margin="1dp" />
         </LinearLayout>
 
@@ -226,7 +226,7 @@
                 android:id="@+id/imageView10"
                 android:layout_weight="1"
                 android:scaleType="fitCenter"
-                android:src="@drawable/sample2"
+                android:src="@android:drawable/ic_partial_secure"
                 android:layout_margin="1dp" />
 
             <ImageView
@@ -235,7 +235,7 @@
                 android:id="@+id/imageView11"
                 android:layout_weight="1"
                 android:scaleType="fitCenter"
-                android:src="@drawable/sample3"
+                android:src="@android:drawable/ic_partial_secure"
                 android:layout_margin="1dp" />
         </LinearLayout>
 

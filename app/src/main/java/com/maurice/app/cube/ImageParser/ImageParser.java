@@ -4,11 +4,10 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.util.Log;
 
-import com.maurice.app.cube.ImageParser.models.Rectangle;
-import com.maurice.app.cube.utils.Logg;
 import com.maurice.app.cube.ImageParser.models.LineSegment;
+import com.maurice.app.cube.ImageParser.models.Rectangle;
 import com.maurice.app.cube.MainActivity;
-import com.maurice.app.cube.SudokuAI;
+import com.maurice.app.cube.utils.Logg;
 
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
@@ -53,7 +52,6 @@ public class ImageParser {
     static int IMAGE_WIDTH = 100;
     static int IMAGE_HEIGHT = 100;
 
-    DigitRecogniser2 digitRecogniser2;
     Rectangle[][] rectangles;
 
 
@@ -87,9 +85,12 @@ public class ImageParser {
     private Mat processMat(Mat src){
 
 
+        Rectangle rect = getrectangle(src);
+
+
         //get NumberImages From Boxes
-        Mat[][] numbersCrop = getCroppedMats(src);
-        MainActivity.setDebugImage(numbersCrop[1][7],0);
+//        Mat[][] numbersCrop = getCroppedMats(src);
+//        MainActivity.setDebugImage(numbersCrop[1][7],0);
 
 //        if(true)return getdebug(src);
 //        Mat colorPic = new Mat();
@@ -103,31 +104,31 @@ public class ImageParser {
 
 
 
-        DigitRecogniser2 digitRecogniser2 = DigitRecogniser2.getInstance(mContext);
+//        DigitRecogniser2 digitRecogniser2 = DigitRecogniser2.getInstance(mContext);
 //        MainActivity.setDebugImage(digitRecogniser2.finalMap.get(2),1);
 
 //        if(true) return src;
-        int[][] digits = digitRecogniser2.recogniseDigits(numbersCrop);
+//        int[][] digits = digitRecogniser2.recogniseDigits(numbersCrop);
 
         //Get solved Solution
-        int[][] solved = SudokuAI.getSolved(digits);
-        GenUtils.printBoard(solved);
-
-
-        for(int i=0;i<rectangles.length;i++){
-            for(int j=0;j<rectangles[0].length;j++) {
-//                if(digits[i][j]==0){
-                    int font = Core.FONT_HERSHEY_SIMPLEX;
-                    Rectangle rect = rectangles[i][j];
-                    Point origin = new Point((rect.lb.x+rect.rb.x)/2-6, (rect.lb.y+rect.lt.y)/2+5);
-                    Imgproc.putText(src, ""+solved[i][j], origin, font, 1, new Scalar(10, 10, 150,100),4);
-//                }
-            }
-        }
-
-        //Set solved digits on top of image
-        Mat temp = digitRecogniser2.mapDigitPics.get(2);
-        temp.copyTo(src.rowRange(0, temp.rows()).colRange(0, temp.cols()));
+//        int[][] solved = SudokuAI.getSolved(digits);
+//        GenUtils.printBoard(solved);
+//
+//
+//        for(int i=0;i<rectangles.length;i++){
+//            for(int j=0;j<rectangles[0].length;j++) {
+////                if(digits[i][j]==0){
+//                    int font = Core.FONT_HERSHEY_SIMPLEX;
+//                    Rectangle rect = rectangles[i][j];
+//                    Point origin = new Point((rect.lb.x+rect.rb.x)/2-6, (rect.lb.y+rect.lt.y)/2+5);
+//                    Imgproc.putText(src, ""+solved[i][j], origin, font, 1, new Scalar(10, 10, 150,100),4);
+////                }
+//            }
+//        }
+//
+//        //Set solved digits on top of image
+//        Mat temp = digitRecogniser2.mapDigitPics.get(2);
+//        temp.copyTo(src.rowRange(0, temp.rows()).colRange(0, temp.cols()));
 
 
         return src;
@@ -142,6 +143,62 @@ public class ImageParser {
 //        return wrapPerspectiveCustom(colorPic, new Rectangle(new Point(0, 0), new Point(300, 0), new Point(0, 600), new Point(300, 600)));
 //        Imgproc.line(colorPic, new Point(0,100), new Point(900,100), new Scalar(255, 250,0), 30);
 //        return wrapPerspectiveCustom(colorPic, new Rectangle(100));
+    }
+
+    private Rectangle getrectangle(Mat src) {
+        double units = (float) src.width()/200;
+        Logg.d(TAG,"Image size units : "+units);
+
+        //Pre process image
+//        src = new Mat(src.size(), CvType.CV_8UC1);
+
+        //Grey image
+        Mat srcGry = src.clone();
+        Imgproc.cvtColor(src, srcGry, Imgproc.COLOR_RGB2GRAY);
+        MainActivity.setDebugImage(srcGry,0);
+
+        //Blur the image
+        int blurRadius = (int) (units*1);
+        Mat srcBlr = new Mat(srcGry.size(), CvType.CV_8UC1);
+        srcGry.copyTo(srcBlr);
+        MainActivity.setDebugImage(srcGry, 1);
+//        GaussianBlur(srcGry, srcBlr, new Size(blurRadius, blurRadius), 0);
+
+
+        //Create an adaptive threshold for parsing and inverting image
+//        Mat src3 = new Mat(srcGry.size(), CvType.CV_8UC1);
+//        Imgproc.adaptiveThreshold(srcGry, src3, 255, Imgproc.T, Imgproc.THRESH_BINARY_INV, 15, 4);
+//        MainActivity.setDebugImage(src3, 2);
+//        Imgproc.threshold(srcGry, src3, 100,255, Imgproc.THRESH_BINARY_INV);
+
+        /// Canny detector
+        Mat srcEdges = new Mat(srcGry.size(), CvType.CV_8UC1);
+        int lowThreshold = 5;
+        int maxThreshold = 200;
+        int kernel_size = 3;
+        Imgproc.Canny(srcBlr, srcEdges, lowThreshold, maxThreshold, kernel_size,true);
+        MainActivity.setDebugImage(srcEdges, 2);
+
+
+        //remove small grains
+//        Mat src3 = removeSmallBlobs(srcEdges);
+//        MainActivity.setDebugImage(src3,3);
+
+        //Find lines
+        ArrayList<LineSegment> segments = findLines(srcEdges);
+        Mat color = new Mat();
+        Imgproc.cvtColor(srcGry, color, Imgproc.COLOR_GRAY2BGR);
+        for(LineSegment lineSegment : segments){
+            Imgproc.line(color, lineSegment.point1, lineSegment.point2, new Scalar(Math.random()*255, Math.random()*255,Math.random()*255), 5);
+//            Imgproc.line(color, lineSegment.point1, lineSegment.point2, new Scalar(200, 0,0), (int)units*10);
+////            Imgproc.line(color, lineSegment.point1, lineSegment.point2, new Scalar(200,0,0), 1);
+        }
+
+        MainActivity.setDebugImage(color,4);
+
+
+
+        return new Rectangle(10);
     }
 
 
@@ -224,100 +281,100 @@ public class ImageParser {
 //    }
 
 
-    public Mat[][] getCroppedMats(Mat src){
-
-        double units = (float) src.width()/200;
-        Logg.d(TAG,"Image size units : "+units);
-
-        //Pre process image
-//        src = new Mat(src.size(), CvType.CV_8UC1);
-
-        //Grey image
-        Mat srcGry = src.clone();
-        Imgproc.cvtColor(src, srcGry, Imgproc.COLOR_RGB2GRAY);
-
-        //Blur the image
-        int blurRadius = (int) (units*1);
-        Mat srcBlr = new Mat(srcGry.size(), CvType.CV_8UC1);
-        srcGry.copyTo(srcBlr);
-//        GaussianBlur(srcGry, srcBlr, new Size(blurRadius, blurRadius), 0);
-
-
-        //Create an adaptive threshold for parsing and inverting image
-        Mat src3 = new Mat(srcGry.size(), CvType.CV_8UC1);
-        Imgproc.adaptiveThreshold(srcGry, src3, 255, Imgproc.ADAPTIVE_THRESH_MEAN_C, Imgproc.THRESH_BINARY_INV, 15, 4);
-//        Imgproc.threshold(srcGry, src3, 100,255, Imgproc.THRESH_BINARY_INV);
-
-        //remove small grains
-        src3 = removeSmallBlobs(src3);
+//    public Mat[][] getCroppedMats(Mat src){
+//
+//        double units = (float) src.width()/200;
+//        Logg.d(TAG,"Image size units : "+units);
+//
+//        //Pre process image
+////        src = new Mat(src.size(), CvType.CV_8UC1);
+//
+//        //Grey image
+//        Mat srcGry = src.clone();
+//        Imgproc.cvtColor(src, srcGry, Imgproc.COLOR_RGB2GRAY);
+//
+//        //Blur the image
+//        int blurRadius = (int) (units*1);
+//        Mat srcBlr = new Mat(srcGry.size(), CvType.CV_8UC1);
+//        srcGry.copyTo(srcBlr);
+////        GaussianBlur(srcGry, srcBlr, new Size(blurRadius, blurRadius), 0);
+//
+//
+//        //Create an adaptive threshold for parsing and inverting image
+//        Mat src3 = new Mat(srcGry.size(), CvType.CV_8UC1);
+//        Imgproc.adaptiveThreshold(srcGry, src3, 255, Imgproc.ADAPTIVE_THRESH_MEAN_C, Imgproc.THRESH_BINARY_INV, 15, 4);
+////        Imgproc.threshold(srcGry, src3, 100,255, Imgproc.THRESH_BINARY_INV);
+//
+//        //remove small grains
+//        src3 = removeSmallBlobs(src3);
+////        MainActivity.setMainImage(src3);
+//
+//        //TODO : may be do a floodfill here
+//
+//        //CHECK : by here image should be square and perspective propererd
+//
+//
+//
+//        //find lines in the image
+//        ArrayList<LineSegment> segments = findLines(src3);
+//
+//
+//        //Filtered Line segments : filter from around 130 segements to final 20
+//        ArrayList<LineSegment> filteredSegments = filterValidLineSegments(segments);
+//
+//
+//
+//
+//        //remove original lines
+//        Mat color = new Mat();
+//        Imgproc.cvtColor(src3, color, Imgproc.COLOR_GRAY2BGR);
+//        for(LineSegment lineSegment : filteredSegments){
+////            Imgproc.line(color, lineSegment.point1, lineSegment.point2, new Scalar(Math.random()*255, Math.random()*255,Math.random()*255), 3);
+//            Imgproc.line(color, lineSegment.point1, lineSegment.point2, new Scalar(200, 0,0), (int)units*1);
+////            Imgproc.line(color, lineSegment.point1, lineSegment.point2, new Scalar(0,0,0), (int) (units*26));
+//        }
+//        MainActivity.setMainImage(color);
+//
+//        // CHECK : after this, no lines should be there in color
+//
+////        if(0==0) return scaleImageToMaxSize(src, 100);
+////        if(0==0) return color;
+//
+//        //get points array
+//        Point[][] points = getKeyPoints(filteredSegments);
+//
+//        //form rectangles array
+//        rectangles = getRectanglesFromPoints(points);
+//
+//        //Draw Lines so that subsequest floodflill will run smoothly
+//        for(LineSegment lineSegment : filteredSegments){
+//            Imgproc.line(src3, lineSegment.point1, lineSegment.point2, new Scalar(255, 0,0), 2);
+//        }
 //        MainActivity.setMainImage(src3);
-
-        //TODO : may be do a floodfill here
-
-        //CHECK : by here image should be square and perspective propererd
-
-
-
-        //find lines in the image
-        ArrayList<LineSegment> segments = findLines(src3);
-
-
-        //Filtered Line segments : filter from around 130 segements to final 20
-        ArrayList<LineSegment> filteredSegments = filterValidLineSegments(segments);
-
-
-
-
-        //remove original lines
-        Mat color = new Mat();
-        Imgproc.cvtColor(src3, color, Imgproc.COLOR_GRAY2BGR);
-        for(LineSegment lineSegment : filteredSegments){
-//            Imgproc.line(color, lineSegment.point1, lineSegment.point2, new Scalar(Math.random()*255, Math.random()*255,Math.random()*255), 3);
-            Imgproc.line(color, lineSegment.point1, lineSegment.point2, new Scalar(200, 0,0), (int)units*1);
-//            Imgproc.line(color, lineSegment.point1, lineSegment.point2, new Scalar(0,0,0), (int) (units*26));
-        }
-        MainActivity.setMainImage(color);
-
-        // CHECK : after this, no lines should be there in color
-
-//        if(0==0) return scaleImageToMaxSize(src, 100);
-//        if(0==0) return color;
-
-        //get points array
-        Point[][] points = getKeyPoints(filteredSegments);
-
-        //form rectangles array
-        rectangles = getRectanglesFromPoints(points);
-
-        //Draw Lines so that subsequest floodflill will run smoothly
-        for(LineSegment lineSegment : filteredSegments){
-            Imgproc.line(src3, lineSegment.point1, lineSegment.point2, new Scalar(255, 0,0), 2);
-        }
-        MainActivity.setMainImage(src3);
-
-        //Remove original lines through flood fill
-        Size size = new Size(src3.size().width+2,src3.size().height+2);
-        Mat mask = new Mat(size, CvType.CV_8UC1);
-        Rect rect = new Rect(0, 0, src3.width(),src3.height());
-        Scalar lowDiff = new Scalar(0,0,0);
-        Scalar highDiff = new Scalar(120,120,120);
-        Logg.d(TAG,"Started Floodfliiing...");
-
-        //Startflood filling at few points
-        Imgproc.floodFill(src3, mask, points[1][0], new Scalar(0, 200, 0), rect, lowDiff, highDiff, 0);
-        Imgproc.floodFill(src3, mask, points[0][0], new Scalar(0, 200, 0), rect, lowDiff, highDiff, 0);
-        Imgproc.floodFill(src3, mask, points[5][5], new Scalar(0, 200, 0), rect, lowDiff, highDiff, 0);
-        Imgproc.floodFill(src3, mask, points[0][1], new Scalar(0, 200, 0), rect, lowDiff, highDiff, 0);
-        Logg.d(TAG, "Ended Floodfliiing....");
-        MainActivity.setMainImage(src3);
-
-        //get ImagesArray
-        Mat[][] boxesCrop = getIndividualBoxes(src3, rectangles);
-
-        //get NumberImages From Boxes
-        Mat[][] numbersCrop = getIndividualNumbers(boxesCrop);
-        return numbersCrop;
-    }
+//
+//        //Remove original lines through flood fill
+//        Size size = new Size(src3.size().width+2,src3.size().height+2);
+//        Mat mask = new Mat(size, CvType.CV_8UC1);
+//        Rect rect = new Rect(0, 0, src3.width(),src3.height());
+//        Scalar lowDiff = new Scalar(0,0,0);
+//        Scalar highDiff = new Scalar(120,120,120);
+//        Logg.d(TAG,"Started Floodfliiing...");
+//
+//        //Startflood filling at few points
+//        Imgproc.floodFill(src3, mask, points[1][0], new Scalar(0, 200, 0), rect, lowDiff, highDiff, 0);
+//        Imgproc.floodFill(src3, mask, points[0][0], new Scalar(0, 200, 0), rect, lowDiff, highDiff, 0);
+//        Imgproc.floodFill(src3, mask, points[5][5], new Scalar(0, 200, 0), rect, lowDiff, highDiff, 0);
+//        Imgproc.floodFill(src3, mask, points[0][1], new Scalar(0, 200, 0), rect, lowDiff, highDiff, 0);
+//        Logg.d(TAG, "Ended Floodfliiing....");
+//        MainActivity.setMainImage(src3);
+//
+//        //get ImagesArray
+//        Mat[][] boxesCrop = getIndividualBoxes(src3, rectangles);
+//
+//        //get NumberImages From Boxes
+//        Mat[][] numbersCrop = getIndividualNumbers(boxesCrop);
+//        return numbersCrop;
+//    }
 
     private Mat extractROI(Mat mat){
         RotatedRect rect = null;
@@ -359,21 +416,21 @@ public class ImageParser {
 
     private ArrayList<LineSegment> findLines(Mat src2){
         Mat src = src2.clone();
-        src = dilate(src,1);
-        MainActivity.setDebugImage(src,0);
-        int maxWidth = 100;
-        float ratio = ((float)src.width())/maxWidth;
-        Mat srcScaled = scaleImageToMaxSize(src,maxWidth);
+//        src = dilate(src,1);
+//        MainActivity.setDebugImage(src,0);
+//        int maxWidth = 100;
+//        float ratio = ((float)src.width())/maxWidth;
+//        Mat srcScaled = scaleImageToMaxSize(src,maxWidth);
         long startTime = System.currentTimeMillis();
-        Log.d(TAG, "Ratio :  "+ratio);
+//        Log.d(TAG, "Ratio :  "+ratio);
 
         //Find lines in the image
-        int threshold = (int) (maxWidth*0.7);//The minimum number of intersections to “detect” a line
-        int minLinelength = (int) (maxWidth*0.75);//The minimum number of points that can form a line. Lines with less than this number of points are disregarded.
-        int maxlineGap = (int) (maxWidth*0.05);//The maximum gap between two points to be considered in the same line.
+        int threshold = 40;//The minimum number of intersections to “detect” a line
+        int minLinelength = 20;//The minimum number of points that can form a line. Lines with less than this number of points are disregarded.
+        int maxlineGap = 3;//The maximum gap between two points to be considered in the same line.
         Mat lines = new Mat();
-        Log.d(TAG, "REACH1 "+(System.currentTimeMillis()-startTime)+" ms");
-        Imgproc.HoughLinesP(srcScaled, lines, 1, Math.PI / 180, threshold, minLinelength, maxlineGap);
+        Log.d(TAG, "REACH1 " + (System.currentTimeMillis() - startTime) + " ms");
+        Imgproc.HoughLinesP(src, lines, 25, Math.PI / 180, threshold, minLinelength, maxlineGap);
         Log.d(TAG, "REACH2 " + (System.currentTimeMillis() - startTime) + " ms");
 
         //draw color lines on the image
@@ -385,8 +442,8 @@ public class ImageParser {
                     y1 = vec[1],
                     x2 = vec[2],
                     y2 = vec[3];
-            Point start = new Point(x1*ratio, y1*ratio);
-            Point end = new Point(x2*ratio, y2*ratio);
+            Point start = new Point(x1, y1);
+            Point end = new Point(x2, y2);
             segments.add(new LineSegment(start, end));
         }
         Log.d(TAG, segments.size()+" lines detected in image in "+(System.currentTimeMillis()-startTime)+" ms");

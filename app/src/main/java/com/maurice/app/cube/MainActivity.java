@@ -1,7 +1,6 @@
 package com.maurice.app.cube;
 
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
@@ -10,7 +9,6 @@ import android.view.MenuItem;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-import com.maurice.app.cube.ImageParser.DigitRecogniser2;
 import com.maurice.app.cube.ImageParser.GenUtils;
 import com.maurice.app.cube.ImageParser.ImageParser;
 
@@ -33,7 +31,6 @@ public class MainActivity extends AppCompatActivity{
     static ArrayList<ImageView> imageViews = new ArrayList<>();
     static ArrayList<TextView> textViews = new ArrayList<>();
     ImageParser imageparser;
-    DigitRecogniser2 digitRecogniser2;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -45,21 +42,21 @@ public class MainActivity extends AppCompatActivity{
 
 
             imageparser = ImageParser.getInstance(this);
-            digitRecogniser2 = DigitRecogniser2.getInstance(this);
+//            digitRecogniser2 = DigitRecogniser2.getInstance(this);
 
 
             //Source Image Bitmap
-            Bitmap sourceBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.train_6);
+            Bitmap sourceBitmap = GenUtils.decodeSampledBitmapFromResource(getResources(), R.drawable.sample1, 400, 200);
 
             //Get rendered bitmap
             Bitmap renderedBitmap = imageparser.parseBitmap(sourceBitmap);
 
             //Show rendered bitmap
-            imageView.setImageBitmap(renderedBitmap);
+            imageView.setImageBitmap(sourceBitmap);
 //            imageView.setImageBitmap(digitRecogniser2.trainSet.trainDataArr.get(0).bitmap);
-            imageView3.setImageBitmap(GenUtils.convertMatToBitmap(digitRecogniser2.finalMap.get(2)));
-            MainActivity.setDebugImage(digitRecogniser2.finalMap.get(6),2);
-            MainActivity.setDebugImage(digitRecogniser2.finalMap.get(8),3);
+//            imageView3.setImageBitmap(GenUtils.convertMatToBitmap(digitRecogniser2.finalMap.get(2)));
+//            MainActivity.setDebugImage(digitRecogniser2.finalMap.get(6),2);
+//            MainActivity.setDebugImage(digitRecogniser2.finalMap.get(8),3);
 //            imageView3.setImageResource(R.drawable.train_3);
 
             //Solve for sample problem
@@ -69,7 +66,7 @@ public class MainActivity extends AppCompatActivity{
 //            GenUtils.printBoard(solved);
 
         }else{
-            Log.e("ERROR","OpenCVLoader not initialized");
+            Log.e("ERROR", "OpenCVLoader not initialized");
         }
 
     }
@@ -144,6 +141,5 @@ public class MainActivity extends AppCompatActivity{
 
         return super.onOptionsItemSelected(item);
     }
-
 
 }
