@@ -141,6 +141,8 @@ public class GenUtils {
     }
 
     public static Point findIntersection(LineSegment l1, LineSegment l2){
+        Logg.d("INTERSECT1",l1.point1.toString()+":"+l1.point2.toString());
+        Logg.d("INTERSECT2",l2.point1.toString()+":"+l2.point2.toString());
         double x1 = l1.point1.x;
         double x2 = l1.point2.x;
         double x3 = l2.point1.x;
@@ -153,6 +155,7 @@ public class GenUtils {
                 (((x1-x2)*(y3-y4))-((y1-y2)*(x3-x4)));
         double y =  (((x1*y2-x2*y1)*(y3-y4))-((x3*y4-x4*y3)*(y1-y2)))/
                 (((x1-x2)*(y3-y4)-(y1-y2)*(x3-x4)));
+        Logg.d("INTERSECTION",(new Point(x,y)).toString());
         return new Point(x,y);
     }
 }

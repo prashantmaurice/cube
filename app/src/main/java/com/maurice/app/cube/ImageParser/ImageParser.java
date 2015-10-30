@@ -2,11 +2,13 @@ package com.maurice.app.cube.ImageParser;
 
 import android.content.Context;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.util.Log;
 
 import com.maurice.app.cube.ImageParser.models.LineSegment;
 import com.maurice.app.cube.ImageParser.models.Rectangle;
 import com.maurice.app.cube.MainActivity;
+import com.maurice.app.cube.R;
 import com.maurice.app.cube.utils.Logg;
 
 import org.opencv.core.Core;
@@ -104,7 +106,7 @@ public class ImageParser {
 
 
 
-//        DigitRecogniser2 digitRecogniser2 = DigitRecogniser2.getInstance(mContext);
+//        DigitRecogniser2 digitRecogniser2 = DigitRecogniser2.getInstance(mContext);=
 //        MainActivity.setDebugImage(digitRecogniser2.finalMap.get(2),1);
 
 //        if(true) return src;
@@ -177,6 +179,7 @@ public class ImageParser {
         int maxThreshold = 200;
         int kernel_size = 3;
         Imgproc.Canny(srcBlr, srcEdges, lowThreshold, maxThreshold, kernel_size,true);
+        srcEdges = dilate(srcEdges,1);
         MainActivity.setDebugImage(srcEdges, 2);
 
 
@@ -186,6 +189,15 @@ public class ImageParser {
 
         //Find lines
         ArrayList<LineSegment> segments = findLines(srcEdges);
+        Mat color0 = new Mat();
+        Imgproc.cvtColor(srcGry, color0, Imgproc.COLOR_GRAY2BGR);
+        for(LineSegment lineSegment : segments){
+            Imgproc.line(color0, lineSegment.point1, lineSegment.point2, new Scalar(Math.random() * 255, Math.random() * 255, Math.random() * 255), 5);
+//            Logg.d("LINE",lineSegment.point1.toString()+" : "+lineSegment.point2.toString());
+//            Imgproc.line(color, lineSegment.point1, lineSegment.point2, new Scalar(200, 0,0), (int)units*10);
+////            Imgproc.line(color, lineSegment.point1, lineSegment.point2, new Scalar(200,0,0), 1);
+        }
+        MainActivity.setDebugImage(color0,3);
 
         //Filtered Line segments : filter from around 40 segements to final 4
         ArrayList<LineSegment> filteredSegments = filterValidLineSegments(segments);
@@ -194,9 +206,11 @@ public class ImageParser {
         Imgproc.cvtColor(srcGry, color, Imgproc.COLOR_GRAY2BGR);
         for(LineSegment lineSegment : filteredSegments){
             Imgproc.line(color, lineSegment.point1, lineSegment.point2, new Scalar(Math.random()*255, Math.random()*255,Math.random()*255), 5);
+            Logg.d("LINE",lineSegment.point1.toString()+" : "+lineSegment.point2.toString());
 //            Imgproc.line(color, lineSegment.point1, lineSegment.point2, new Scalar(200, 0,0), (int)units*10);
 ////            Imgproc.line(color, lineSegment.point1, lineSegment.point2, new Scalar(200,0,0), 1);
         }
+        MainActivity.setDebugImage(color, 4);
 
 
         //Find Bounding rectangle lines
@@ -204,20 +218,181 @@ public class ImageParser {
         rect.print();
 
         //Draw Bounding Rectangle
+        color = new Mat();
+        Imgproc.cvtColor(srcGry, color, Imgproc.COLOR_GRAY2BGR);
+        Imgproc.line(color, new Point(100,100), new Point(100,200), new Scalar(Math.random() * 255, 0,0), 5);
         for(int i=0;i<4;i++){
-            Imgproc.line(color, rect.lt, rect.lb, new Scalar(Math.random()*255, Math.random()*255,Math.random()*255), 5);
+            Imgproc.line(color, rect.lb, rect.lt, new Scalar(Math.random()*255, Math.random()*255,Math.random()*255), 5);
             Imgproc.line(color, rect.lb, rect.rb, new Scalar(Math.random()*255, Math.random()*255,Math.random()*255), 5);
             Imgproc.line(color, rect.rb, rect.rt, new Scalar(Math.random()*255, Math.random()*255,Math.random()*255), 5);
             Imgproc.line(color, rect.rt, rect.lt, new Scalar(Math.random()*255, Math.random()*255,Math.random()*255), 5);
         }
+        MainActivity.setDebugImage(color, 5);
+
+        //Get image that needs to be displayed inside box
+        Bitmap bitmap = BitmapFactory.decodeResource(mContext.getResources(), R.drawable.image);
+        Mat imageMat = GenUtils.convertBitmapToMat(bitmap);
+
+//        MatOfPoint2f obj = new MatOfPoint2f();
+//        obj.fromList(objList);
+//
+//        MatOfPoint2f scene = new MatOfPoint2f();
+//        scene.fromList(sceneList);
+//
+//        Mat H = Calib3d.findHomography(obj, scene);
+//        Mat logoWarped;
+//        // Warp the logo image to change its perspective
+//        warpPerspective(imageLogo,logoWarped,H,imageMain.size() );
+//        showFinal(imageMain,logoWarped);
 
 
-        MainActivity.setDebugImage(color, 4);
+        //add image on top of original image
+//        Mat imgTrain = imageMat;
+//        Mat imgMask = new Mat(imgTrain.size(), CvType.CV_8UC1, new Scalar(255));
+//        Mat imgMaskWarped = new Mat();
+//
+//        Mat src_mat=new Mat(4,1,CvType.CV_32FC2);
+//        Mat dst_mat=new Mat(4,1,CvType.CV_32FC2);
+//        Rectangle srcR = new Rectangle(128);
+//        src_mat.put(0, 0, srcR.lt.x, srcR.lt.y, srcR.rt.x, srcR.rt.y, srcR.lb.x, srcR.lb.y, srcR.rb.x, srcR.rb.y);
+//        dst_mat.put(0, 0, srcR.lt.x, srcR.lt.y, srcR.rt.x, srcR.rt.y, srcR.lb.x, srcR.lb.y, rect.rb.x, srcR.rb.y);
+//        Mat TRANSFORMATION_MATRIX=Imgproc.getPerspectiveTransform(src_mat, dst_mat);
+//
+//        Imgproc.warpPerspective(imgMask, imgMaskWarped, TRANSFORMATION_MATRIX, color.size());
+//
+//        Mat imgTrainWarped = new Mat();
+//        Imgproc.warpPerspective(imgTrain, imgTrainWarped, TRANSFORMATION_MATRIX, color.size());
+//
+//// now copy only masked pixel:
+//        imageMat.copyTo(color);
+
+
+
+        color = addImageOnExisting(color, rect, imageMat);
+        MainActivity.setDebugImage(color, 0);
+
+
 
 
 
         return new Rectangle(10);
     }
+    private Mat addImageOnExisting(Mat src, Rectangle rect, Mat image){
+        //points are in order  top-left, top-right, bottom-right, bottom-left
+
+        Mat src_mat=new Mat(4,1,CvType.CV_32FC2);
+        Mat dst_mat=new Mat(4,1,CvType.CV_32FC2);
+
+        Rectangle srcR = new Rectangle(128);
+
+        src_mat.put(0, 0, srcR.lt.x, srcR.lt.y, srcR.rt.x, srcR.rt.y, srcR.lb.x, srcR.lb.y, srcR.rb.x, srcR.rb.y);
+        dst_mat.put(0, 0, srcR.lt.x, srcR.lt.y, srcR.rt.x, srcR.rt.y, srcR.lb.x, srcR.lb.y, rect.rb.x, srcR.rb.y);
+//        dst_mat.put(0, 0, rect.lt.x, rect.lt.y, rect.rt.x, rect.rt.y, rect.lb.x, rect.lb.y, rect.rb.x, rect.rb.y);
+        Mat perspectiveTransform=Imgproc.getPerspectiveTransform(src_mat, dst_mat);
+        Mat dst=src.clone();
+
+
+        Imgproc.warpPerspective(image, dst, perspectiveTransform, src.size());
+//        src.copyTo();
+
+        //TEST2
+
+        Point[] dstPoints = new Point[4];
+        int w1 = 200;
+        int h1 = 200;
+        dstPoints[0] = new Point(10, 0);
+        dstPoints[1] = new Point(w1, 0);
+        dstPoints[2] = new Point(w1, h1);
+        dstPoints[3] = new Point(0, h1);
+
+        MatOfPoint2f canonicalMarker = new MatOfPoint2f();
+        canonicalMarker.fromArray(dstPoints);
+
+        Point[] points = new Point[4];
+        int w2 = 200;
+        int h2 = 200;
+        points[0] = new Point(0, 0);
+        points[1] = new Point(w2, 0);
+        points[2] = new Point(w2, h2);
+        points[3] = new Point(0, h2);
+        MatOfPoint2f marker = new MatOfPoint2f(points);
+        Mat trans = Imgproc.getPerspectiveTransform(marker, canonicalMarker);
+        Imgproc.warpPerspective(src, dst, trans, new Size(800, 800));
+        MainActivity.setDebugImage(dst, 1);
+
+        ArrayList<Point> points2 = new ArrayList<>();
+        points2.add(new Point(rect.rt.x,rect.rt.y));//top right
+        points2.add(new Point(rect.lt.x,rect.lt.y));//top left
+        points2.add(new Point(rect.lb.x,rect.lb.y));//bottom left
+        points2.add(new Point(rect.rb.x,rect.rb.y));//bottom right
+        dst = warpPerspective(points2,src,400,400);
+        MainActivity.setDebugImage(dst, 1);
+
+        dst = warpPerspective2(points2,dst,src.width(),src.height(),400,400);
+        MainActivity.setDebugImage(dst, 3);
+//        Calib3d.findHomography(p, h, p2h);
+//        cvWarpPerspective(src, src, p2h);
+
+
+
+        return src;
+
+    }
+
+//    Mat doOpposite(Rectangle rect, Mat mat){
+//
+//    }
+
+    Mat getPerspectiveTransformation2(ArrayList<Point> inputPoints, int w, int h) {
+        Point[] canonicalPoints = new Point[4];
+        canonicalPoints[0] = new Point(w, 0);
+        canonicalPoints[1] = new Point(0, 0);
+        canonicalPoints[2] = new Point(0, h);
+        canonicalPoints[3] = new Point(w, h);
+
+        MatOfPoint2f canonicalMarker = new MatOfPoint2f();
+        canonicalMarker.fromArray(canonicalPoints);
+
+        Point[] points = new Point[4];
+        for (int i = 0; i < 4; i++) {
+            points[i] = new Point(inputPoints.get(i).x, inputPoints.get(i).y);
+        }
+        MatOfPoint2f marker = new MatOfPoint2f(points);
+        return Imgproc.getPerspectiveTransform(canonicalMarker,marker);
+    }
+
+    Mat warpPerspective2(ArrayList<Point> inputPoints, Mat mat, int w, int h,int width, int height) {
+        Mat transform = getPerspectiveTransformation2(inputPoints, width, height);
+        Mat unWarpedMarker = new Mat(w, h, CvType.CV_8UC1);
+        Imgproc.warpPerspective(mat, unWarpedMarker, transform, new Size(w, h));
+        return unWarpedMarker;
+    }
+
+    Mat getPerspectiveTransformation(ArrayList<Point> inputPoints, int w, int h) {
+        Point[] canonicalPoints = new Point[4];
+        canonicalPoints[0] = new Point(w, 0);
+        canonicalPoints[1] = new Point(0, 0);
+        canonicalPoints[2] = new Point(0, h);
+        canonicalPoints[3] = new Point(w, h);
+
+        MatOfPoint2f canonicalMarker = new MatOfPoint2f();
+        canonicalMarker.fromArray(canonicalPoints);
+
+        Point[] points = new Point[4];
+        for (int i = 0; i < 4; i++) {
+            points[i] = new Point(inputPoints.get(i).x, inputPoints.get(i).y);
+        }
+        MatOfPoint2f marker = new MatOfPoint2f(points);
+        return Imgproc.getPerspectiveTransform(marker, canonicalMarker);
+    }
+
+    Mat warpPerspective(ArrayList<Point> inputPoints, Mat mat, int w, int h) {
+        Mat transform = getPerspectiveTransformation(inputPoints, w, h);
+        Mat unWarpedMarker = new Mat(w, h, CvType.CV_8UC1);
+        Imgproc.warpPerspective(mat, unWarpedMarker, transform, new Size(w, h));
+        return unWarpedMarker;
+    }
+
 
     private Rectangle findRectangleFromFourLines(ArrayList<LineSegment> filteredSegments) {
 
@@ -227,11 +402,34 @@ public class ImageParser {
             }
         });
 
-        Point p1 = GenUtils.findIntersection(filteredSegments.get(0), filteredSegments.get(1));
-        Point p2 = GenUtils.findIntersection(filteredSegments.get(1), filteredSegments.get(2));
-        Point p3 = GenUtils.findIntersection(filteredSegments.get(2), filteredSegments.get(3));
-        Point p4 = GenUtils.findIntersection(filteredSegments.get(3), filteredSegments.get(0));
 
+        Point p1 = GenUtils.findIntersection(filteredSegments.get(0), filteredSegments.get(1));
+        Point p2 = GenUtils.findIntersection(filteredSegments.get(0), filteredSegments.get(2));
+        Point p3 = GenUtils.findIntersection(filteredSegments.get(0), filteredSegments.get(3));
+        Point p4 = GenUtils.findIntersection(filteredSegments.get(1), filteredSegments.get(2));
+        Point p5 = GenUtils.findIntersection(filteredSegments.get(1), filteredSegments.get(3));
+        Point p6 = GenUtils.findIntersection(filteredSegments.get(2), filteredSegments.get(3));
+
+        Rect r = new Rect(new Point(0,0),new Point(1000,1000));
+        ArrayList<Point> points = new ArrayList<>();
+        if(p1.inside(r))  points.add(p1);
+        if(p2.inside(r))  points.add(p2);
+        if(p3.inside(r))  points.add(p3);
+        if(p4.inside(r))  points.add(p4);
+        if(p5.inside(r))  points.add(p5);
+        if(p6.inside(r))  points.add(p6);
+
+        //Find the order
+        if(points.size()==4){
+            Collections.sort(points, new Comparator<Point>() {
+                public int compare(Point o1, Point o2) {
+                    return (int) (o2.x - o1.x);
+                }
+            });
+        }
+
+
+        if(points.size()==4) return new Rectangle(points.get(0),points.get(1),points.get(2),points.get(3));
         return new Rectangle(p1,p2,p4,p3);
     }
 
@@ -460,10 +658,10 @@ public class ImageParser {
         long startTime = System.currentTimeMillis();
 //        Log.d(TAG, "Ratio :  "+ratio);
 
-        //Find lines in the image
-        int threshold = 20;//The minimum number of intersections to “detect” a line
-        int minLinelength = 20;//The minimum number of points that can form a line. Lines with less than this number of points are disregarded.
-        int maxlineGap = 3;//The maximum gap between two points to be considered in the same line.
+        //Find lines in the image (20,20,3)
+        int threshold = 60;//The minimum number of intersections to “detect” a line
+        int minLinelength = 40;//The minimum number of points that can form a line. Lines with less than this number of points are disregarded.
+        int maxlineGap = 20;//The maximum gap between two points to be considered in the same line.
         Mat lines = new Mat();
         Log.d(TAG, "REACH1 " + (System.currentTimeMillis() - startTime) + " ms");
         Imgproc.HoughLinesP(src, lines, 25, Math.PI / 180, threshold, minLinelength, maxlineGap);
@@ -531,6 +729,7 @@ public class ImageParser {
         for(int i=0;i<segments.size();i++){//find highest
             if(!rejectedIndices.contains(i)){
                 filtered.add(segments.get(i));
+
                 Logg.d("SELECTED LINE",segments.get(i).point1.toString());
             }
 
