@@ -49,7 +49,11 @@ public class MainActivity extends AppCompatActivity{
             Bitmap sourceBitmap = GenUtils.decodeSampledBitmapFromResource(getResources(), R.drawable.sample1, 400, 200);
 
             //Get rendered bitmap
-            Bitmap renderedBitmap = imageparser.parseBitmap(sourceBitmap);
+            try{
+                Bitmap renderedBitmap = imageparser.parseBitmap(sourceBitmap);
+            }catch (ImageProcessException e){
+
+            }
 
             //Show rendered bitmap
             imageView.setImageBitmap(sourceBitmap);

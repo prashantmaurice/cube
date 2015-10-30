@@ -7,6 +7,7 @@ import android.util.Log;
 
 import com.maurice.app.cube.ImageParser.models.LineSegment;
 import com.maurice.app.cube.ImageParser.models.Rectangle;
+import com.maurice.app.cube.ImageProcessException;
 import com.maurice.app.cube.MainActivity;
 import com.maurice.app.cube.R;
 import com.maurice.app.cube.utils.Logg;
@@ -69,11 +70,13 @@ public class ImageParser {
 
 
     /** MAIN FUNCTION TO GET A CALCULATED BITMAP*/
-    public Bitmap parseBitmap(Bitmap bitmap){
+    public Bitmap parseBitmap(Bitmap bitmap) throws ImageProcessException{
         long start = System.currentTimeMillis();
 
         //Convert image to Mat
         Mat mat = GenUtils.convertBitmapToMat(bitmap);
+
+        Logg.d("TIME", "B1 : " + (System.currentTimeMillis() - start) + " ms");
 
         //Apply Transformations
         mat = processMat(mat);
@@ -84,10 +87,28 @@ public class ImageParser {
         return GenUtils.convertMatToBitmap(mat);
     }
 
-    public Mat processMat(Mat src){
+    public Mat processMat(Mat src) throws ImageProcessException{
+        int width = 864;
+        int height = 480;
 
+        int scale = 2;
+        Size size = new Size(width/scale,height/scale);//the dst image size,e.g.100x100
 
-        Rectangle rect = getrectangle(src);
+        Mat dst = new Mat(size,src.type());//dst image
+        Imgproc.resize(src, dst, size);
+
+        //Process the Image
+        Mat pros =  getProcessedMat(dst);
+
+        Mat dst2 = new Mat(src.size(),src.type());
+        Imgproc.resize(pros, dst2,src.size());
+
+        return dst2;
+
+        //reduce Image size
+//        return  scaleImageToMaxSize(src,200);
+
+//        return getProcessedMat(src);
 
 
         //get NumberImages From Boxes
@@ -133,7 +154,7 @@ public class ImageParser {
 //        temp.copyTo(src.rowRange(0, temp.rows()).colRange(0, temp.cols()));
 
 
-        return src;
+//        return src;
 //        return extractROI(numbersCrop[0][2]);
 
 
@@ -147,7 +168,7 @@ public class ImageParser {
 //        return wrapPerspectiveCustom(colorPic, new Rectangle(100));
     }
 
-    private Rectangle getrectangle(Mat src) {
+    private Mat getProcessedMat(Mat src) throws ImageProcessException{
         double units = (float) src.width()/200;
         Logg.d(TAG,"Image size units : "+units);
 
@@ -164,6 +185,8 @@ public class ImageParser {
         Mat srcBlr = new Mat(srcGry.size(), CvType.CV_8UC1);
         srcGry.copyTo(srcBlr);
         MainActivity.setDebugImage(srcGry, 1);
+//        if(true) return srcBlr;
+
 //        GaussianBlur(srcGry, srcBlr, new Size(blurRadius, blurRadius), 0);
 
 
@@ -176,11 +199,15 @@ public class ImageParser {
         /// Canny detector
         Mat srcEdges = new Mat(srcGry.size(), CvType.CV_8UC1);
         int lowThreshold = 5;
-        int maxThreshold = 200;
+        int maxThreshold = 300;
         int kernel_size = 3;
         Imgproc.Canny(srcBlr, srcEdges, lowThreshold, maxThreshold, kernel_size,true);
         srcEdges = dilate(srcEdges,1);
         MainActivity.setDebugImage(srcEdges, 2);
+//        if(true) return srcEdges;
+
+//        if(true)throw new ImageProcessException("0");
+
 
 
         //remove small grains
@@ -191,13 +218,18 @@ public class ImageParser {
         ArrayList<LineSegment> segments = findLines(srcEdges);
         Mat color0 = new Mat();
         Imgproc.cvtColor(srcGry, color0, Imgproc.COLOR_GRAY2BGR);
+        int maxCount = 20;
         for(LineSegment lineSegment : segments){
-            Imgproc.line(color0, lineSegment.point1, lineSegment.point2, new Scalar(Math.random() * 255, Math.random() * 255, Math.random() * 255), 5);
+            if(maxCount--<0) break;
+            Imgproc.line(color0, lineSegment.point1, lineSegment.point2, new Scalar(Math.random() * 255, Math.random() * 255, Math.random() * 255), 1);
 //            Logg.d("LINE",lineSegment.point1.toString()+" : "+lineSegment.point2.toString());
 //            Imgproc.line(color, lineSegment.point1, lineSegment.point2, new Scalar(200, 0,0), (int)units*10);
 ////            Imgproc.line(color, lineSegment.point1, lineSegment.point2, new Scalar(200,0,0), 1);
         }
         MainActivity.setDebugImage(color0,3);
+//        if(true) return color0;
+        if(segments.size()<5) throw new ImageProcessException("I2");
+//        if(true)throw new ImageProcessException("I");
 
         //Filtered Line segments : filter from around 40 segements to final 4
         ArrayList<LineSegment> filteredSegments = filterValidLineSegments(segments);
@@ -205,12 +237,14 @@ public class ImageParser {
         Mat color = new Mat();
         Imgproc.cvtColor(srcGry, color, Imgproc.COLOR_GRAY2BGR);
         for(LineSegment lineSegment : filteredSegments){
-            Imgproc.line(color, lineSegment.point1, lineSegment.point2, new Scalar(Math.random()*255, Math.random()*255,Math.random()*255), 5);
+            Imgproc.line(color, lineSegment.point1, lineSegment.point2, new Scalar(Math.random()*255, Math.random()*255,Math.random()*255), 3);
             Logg.d("LINE",lineSegment.point1.toString()+" : "+lineSegment.point2.toString());
 //            Imgproc.line(color, lineSegment.point1, lineSegment.point2, new Scalar(200, 0,0), (int)units*10);
 ////            Imgproc.line(color, lineSegment.point1, lineSegment.point2, new Scalar(200,0,0), 1);
         }
         MainActivity.setDebugImage(color, 4);
+        if(filteredSegments.size()<5) throw new ImageProcessException("I2");
+        if(true) return color;
 
 
         //Find Bounding rectangle lines
@@ -228,6 +262,8 @@ public class ImageParser {
             Imgproc.line(color, rect.rt, rect.lt, new Scalar(Math.random()*255, Math.random()*255,Math.random()*255), 5);
         }
         MainActivity.setDebugImage(color, 5);
+        if(true) return color;
+
 
         //Get image that needs to be displayed inside box
         Bitmap bitmap = BitmapFactory.decodeResource(mContext.getResources(), R.drawable.image);
@@ -268,14 +304,14 @@ public class ImageParser {
 
 
 
-        color = addImageOnExisting(color, rect, imageMat);
+        color = addImageOnExisting(src, rect, imageMat);
         MainActivity.setDebugImage(color, 0);
 
 
 
 
 
-        return new Rectangle(10);
+        return color;
     }
     private Mat addImageOnExisting(Mat src, Rectangle rect, Mat image){
         //points are in order  top-left, top-right, bottom-right, bottom-left
@@ -328,11 +364,36 @@ public class ImageParser {
         dst = warpPerspective(points2,src,400,400);
         MainActivity.setDebugImage(dst, 1);
 
-        dst = warpPerspective2(points2,dst,src.width(),src.height(),400,400);
+        Mat dst2 = src.clone();
+        dst = warpPerspective2(points2,image,src.width(),src.height(),image.width(),image.height());
         MainActivity.setDebugImage(dst, 3);
+        Core.add(src, dst, dst2);
+        MainActivity.setDebugImage(dst2, 5);
+
+
 //        Calib3d.findHomography(p, h, p2h);
 //        cvWarpPerspective(src, src, p2h);
 
+
+        //Add Image
+        //Now create a mask of logo and create its inverse mask also
+//        Mat imageGry = image.clone();
+//        Imgproc.cvtColor(image, imageGry, Imgproc.COLOR_RGB2GRAY);
+//        Mat src3 = new Mat(imageGry.size(), CvType.CV_8UC1);
+//        Imgproc.threshold(imageGry, src3, 1, 255, Imgproc.THRESH_BINARY_INV);
+//        Mat src4 = new Mat(src3.size(), CvType.CV_8UC1);
+//        Core.bitwise_not(src3, src4);
+
+        // Now black-out the area of logo in ROI
+//        Mat srcGry = src.clone();
+//        Mat roi = new Mat(src.size(),src.type());
+//        Core.bitwise_and(roi, roi,srcGry,src4);
+//        Core.add(srcGry, dst, dst2);
+//        MainActivity.setDebugImage(srcGry, 6);
+//        MainActivity.setDebugImage(srcGry, 6);
+
+
+//        img1_bg = cv2.bitwise_and(roi,roi,mask = mask_inv)
 
 
         return src;
@@ -396,11 +457,11 @@ public class ImageParser {
 
     private Rectangle findRectangleFromFourLines(ArrayList<LineSegment> filteredSegments) {
 
-        Collections.sort(filteredSegments, new Comparator<LineSegment>() {
-            public int compare(LineSegment o1, LineSegment o2) {
-                return (int) (o2.getAngle() - o1.getAngle());
-            }
-        });
+//        Collections.sort(filteredSegments, new Comparator<LineSegment>() {
+//            public int compare(LineSegment o1, LineSegment o2) {
+//                return (int) (o2.getAngle() - o1.getAngle());
+//            }
+//        });
 
 
         Point p1 = GenUtils.findIntersection(filteredSegments.get(0), filteredSegments.get(1));
@@ -659,8 +720,8 @@ public class ImageParser {
 //        Log.d(TAG, "Ratio :  "+ratio);
 
         //Find lines in the image (20,20,3)
-        int threshold = 60;//The minimum number of intersections to “detect” a line
-        int minLinelength = 40;//The minimum number of points that can form a line. Lines with less than this number of points are disregarded.
+        int threshold = 20;//The minimum number of intersections to “detect” a line
+        int minLinelength = 30;//The minimum number of points that can form a line. Lines with less than this number of points are disregarded.
         int maxlineGap = 20;//The maximum gap between two points to be considered in the same line.
         Mat lines = new Mat();
         Log.d(TAG, "REACH1 " + (System.currentTimeMillis() - startTime) + " ms");

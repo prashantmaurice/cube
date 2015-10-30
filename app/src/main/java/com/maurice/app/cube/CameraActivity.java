@@ -8,6 +8,7 @@ import android.view.SurfaceView;
 import android.view.WindowManager;
 
 import com.maurice.app.cube.ImageParser.ImageParser;
+import com.maurice.app.cube.utils.Logg;
 
 import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.CameraBridgeViewBase;
@@ -102,7 +103,12 @@ public class CameraActivity extends Activity implements CvCameraViewListener2 {
         //ACTUAL IMAGE PROCESSING BEGINS
 
 //        Mat srcGry = inputFrame.rgba();
-        return imageParser.processMat(inputFrame.rgba());
+        try{
+            return imageParser.processMat(inputFrame.rgba());
+        }catch(ImageProcessException e){
+            Logg.d("ImageProcessE", "" + e);
+            return inputFrame.rgba();
+        }
 //        Imgproc.cvtColor(inputFrame.rgba(), srcGry, Imgproc.COLOR_RGB2GRAY);
 //        return srcGry;
     }
