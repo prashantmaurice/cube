@@ -48,6 +48,19 @@ public class CornerDetector {
      * @param srcGry : this is a  canny detector result
      */
     public static Mat findCorners(Mat srcEdges, Mat srcGry) {
+
+        if(true) return findThroughQuardilateralApproach(srcEdges,srcGry);
+
+
+
+
+
+
+
+
+
+
+
         //        srcEdges = dilate(srcEdges,1);
 
 //        ArrayList<LineSegment> segments = ImageParser.findLines(srcEdges);
@@ -76,22 +89,128 @@ public class CornerDetector {
 //                ArrayList<Integer> values = getOutBoundArr(new Point(i, j), srcGry);
 
 //                Logg.d("DEBUGHH","is : "+srcGry.get(i,j)[0]);
-                if(dilatedEdges.get(i,j)[0]>=200){
-                    boolean isCorner = isPointCorner(new Point(j, i), srcGry);
+//                if(dilatedEdges.get(i,j)[0]>=200){
+//                    boolean isCorner = isPointCorner(new Point(j, i), srcGry);
 //
-                    if(isCorner){
-                        if(count++>50) break;
+//                    if(isCorner){
+//                        if(count++>50) break;
 //                        Logg.d("DEBUGHH", "match : " + (new Point(i, j)).toString() + " : " + srcGry.get(i, j)[0]);
-                        Imgproc.line(color0, new Point(j, i), new Point(j + 1, i), new Scalar(255,100,100), 3);
-                    }else{
-                        Imgproc.line(color0, new Point(j, i), new Point(j + 1, i), new Scalar(100,100,100), 3);
-                    }
-                }
+                        Imgproc.line(color0, new Point(j, i), new Point(j + 1, i), new Scalar(dilatedEdges.get(i,j)[0],0,0), 3);
+//                    }else{
+//                        Imgproc.line(color0, new Point(j, i), new Point(j + 1, i), new Scalar(100,100,100), 3);
+//                    }
+//                }
             }
         }
         Logg.d("DEBUGTTTT",count+"Corners found in  : "+(System.currentTimeMillis()-start)+" ms");
         return color0;
     }
+
+    private static interface Optimiser{
+        boolean goLeft(int value, Mat srcGry);
+    }
+
+    private static Mat findThroughQuardilateralApproach(Mat srcEdges,Mat srcGry) {
+
+        //Find Left most point
+        int firstRow = findRowWithOptimisation(srcEdges, new Optimiser() {
+            @Override
+            public boolean goLeft(int row, Mat srcGry) {
+                return findSumForRow(row, srcGry) <= 1;
+            }
+        }, 0, srcGry.rows());
+        int firstCol = 0;
+        for(int i=0;i<srcGry.cols();i++){
+            if(srcGry.get(firstRow,i)[0]!=0) {firstCol = i;break;}
+        }
+
+        //Find last most point
+        int lastRow = findRowWithOptimisation(srcEdges, new Optimiser() {
+            @Override
+            public boolean goLeft(int row, Mat srcGry) {
+                return findSumForRow(row, srcGry) >= 1;
+            }
+        }, 0, srcGry.rows());
+        lastRow = lastRow+2;
+        if(lastRow<0) lastRow = 0; if(lastRow>srcEdges.rows()-1) lastRow = srcEdges.rows()-1;
+        int lastCol = 0;
+        for(int i=0;i<srcGry.cols();i++){
+            if(srcGry.get(lastRow,i)[0]!=0) {lastCol = i;break;}
+        }
+
+        //Find top most point
+        int topCol = findColWithOptimisation(srcEdges, new Optimiser() {
+            @Override
+            public boolean goLeft(int col, Mat srcGry) {
+                return findSumForCol(col, srcGry) <= 1;
+            }
+        }, 0, srcGry.cols());
+        topCol = topCol;
+        if(topCol<0) topCol = 0; if(topCol>srcEdges.cols()-1) topCol = srcEdges.cols()-1;
+        int topRow = 0;
+        for(int i=0;i<srcGry.rows();i++){
+            if(srcGry.get(i,topCol)[0]!=0) {topRow = i;break;}
+        }
+
+        //Find bottom most point
+        int bottomCol = findColWithOptimisation(srcEdges, new Optimiser() {
+            @Override
+            public boolean goLeft(int col, Mat srcGry) {
+                return findSumForCol(col, srcGry) >= 1;
+            }
+        }, 0, srcGry.cols());
+        bottomCol = bottomCol+2;
+        if(bottomCol<0) bottomCol = 0; if(bottomCol>srcEdges.cols()-1) bottomCol = srcEdges.cols()-1;
+        int bottomRow = 0;
+        for(int i=0;i<srcGry.rows();i++){
+            if(srcGry.get(i,bottomCol)[0]!=0) {bottomRow = i;break;}
+        }
+
+        Mat color0 = new Mat();
+        Imgproc.cvtColor(srcEdges, color0, Imgproc.COLOR_GRAY2BGR);
+        drawPoint(color0, new Point(firstCol, firstRow), new Scalar(255, 0, 0));
+        drawPoint(color0, new Point(lastCol, lastRow),new Scalar(0,255,0));
+        drawPoint(color0, new Point(topCol, topRow),new Scalar(255,255,0));
+        drawPoint(color0, new Point(bottomCol, bottomRow),new Scalar(0,255,255));
+//        drawPoint(color0, new Point(lastCol1, lastRow),new Scalar(0,255,255));
+//        drawPoint(color0, new Point(lastCol2, lastRow),new Scalar(255,255,0));
+
+        //Find highest point
+
+
+
+        return color0;
+    }
+
+    private static void drawPoint(Mat mat, Point point, Scalar color){
+        Imgproc.line(mat, point, new Point(point.x + 1, point.y), color, 3);
+    }
+
+    private static int findRowWithOptimisation(Mat srcGry,Optimiser optimiser, int left, int right) {
+        if(Math.abs(right-left)<2) return left;//terminating
+
+        int midVal = (left+right)/2;
+        if(optimiser.goLeft(midVal,srcGry)){
+            return findRowWithOptimisation(srcGry,optimiser,left,midVal);
+        }else{
+            return findRowWithOptimisation(srcGry,optimiser,midVal,right);
+        }
+
+    }
+
+    private static int findColWithOptimisation(Mat srcGry,Optimiser optimiser, int left, int right) {
+        if(Math.abs(right-left)<2) return left;//terminating
+
+        int midVal = (left+right)/2;
+        if(optimiser.goLeft(midVal,srcGry)){
+            return findColWithOptimisation(srcGry, optimiser, left, midVal);
+        }else{
+            return findColWithOptimisation(srcGry, optimiser, midVal, right);
+        }
+
+    }
+
+
 
 
     private static boolean isPointCorner(Point p, Mat mat){
@@ -152,6 +271,22 @@ public class CornerDetector {
             values.add((int) mat.get((int)(p.y+pTest.y),(int)(p.x+pTest.x))[0]);;
         }
         return values;
+    }
+
+    //returns array of values in outbound circle
+    private static int findSumForRow(int row, Mat mat) {
+        int count = 0;
+        for(int i=0;i<mat.cols();i++) {
+            count += mat.get(row,i)[0];
+        }
+        return count;
+    }
+    private static int findSumForCol(int col, Mat mat) {
+        int count = 0;
+        for(int i=0;i<mat.rows();i++) {
+            count += mat.get(i,col)[0];
+        }
+        return count;
     }
 
 
