@@ -91,7 +91,7 @@ public class ImageParser {
         int width = 864;
         int height = 480;
 
-        int scale = 2;
+        int scale = 4;
         Size size = new Size(width/scale,height/scale);//the dst image size,e.g.100x100
 
         Mat dst = new Mat(size,src.type());//dst image
@@ -170,21 +170,44 @@ public class ImageParser {
 
     private Mat getProcessedMat(Mat src) throws ImageProcessException{
         double units = (float) src.width()/200;
-        Logg.d(TAG,"Image size units : "+units);
+        Logg.d(TAG, "Image size units : " + units);
 
-        //Pre process image
-//        src = new Mat(src.size(), CvType.CV_8UC1);
+//        Mat hsv = new Mat();
+//        Imgproc.cvtColor(src,hsv, Imgproc.COLOR_BGR2HSV);
+//
+//        //Pre process image
+////        src = new Mat(src.size(), CvType.CV_8UC1);
+//
+//        Scalar lower_blue = new Scalar(110,50,50,0);
+//        Scalar upper_blue = new Scalar(110,255,255,255);
+//
+//        // Threshold the HSV image to get only blue colors
+//        Mat mask = new Mat();
+//        Core.inRange(hsv, lower_blue, upper_blue, mask);
+//
+//        //Bitwise-AND mask and original image
+//        Core.bitwise_and(src,mask, src);
+//        if(true)return mask;
+
 
         //Grey image
         Mat srcGry = src.clone();
         Imgproc.cvtColor(src, srcGry, Imgproc.COLOR_RGB2GRAY);
+//        Imgproc.threshold(srcGry, srcGry, 200, 255, 0);
+//        Imgproc.adaptiveThreshold(srcGry, srcGry, 255, Imgproc.ADAPTIVE_THRESH_MEAN_C, Imgproc.THRESH_BINARY_INV, 15, 4);
+        Imgproc.threshold(srcGry, srcGry, 160, 255, Imgproc.THRESH_BINARY);
+
+
+//        Imgproc.cornerHarris(srcGry, srcGry, 20, 3, 44);
+//        if(true)return srcGry;
+
         MainActivity.setDebugImage(srcGry,0);
 
         //Blur the image
-        int blurRadius = (int) (units*1);
-        Mat srcBlr = new Mat(srcGry.size(), CvType.CV_8UC1);
-        srcGry.copyTo(srcBlr);
-        MainActivity.setDebugImage(srcGry, 1);
+//        int blurRadius = (int) (units*1);
+//        Mat srcBlr = new Mat(srcGry.size(), CvType.CV_8UC1);
+//        srcGry.copyTo(srcBlr);
+//        MainActivity.setDebugImage(srcGry, 1);
 //        if(true) return srcBlr;
 
 //        GaussianBlur(srcGry, srcBlr, new Size(blurRadius, blurRadius), 0);
@@ -201,10 +224,16 @@ public class ImageParser {
         int lowThreshold = 5;
         int maxThreshold = 300;
         int kernel_size = 3;
-        Imgproc.Canny(srcBlr, srcEdges, lowThreshold, maxThreshold, kernel_size,true);
-        srcEdges = dilate(srcEdges,1);
-        MainActivity.setDebugImage(srcEdges, 2);
-//        if(true) return srcEdges;
+        Imgproc.Canny(srcGry, srcEdges, lowThreshold, maxThreshold, kernel_size,true);
+//        srcEdges = dilate(srcEdges,1);
+//        MainActivity.setDebugImage(srcEdges, 2);
+
+
+
+        //Corners Detect
+        srcEdges = CornerDetector.findCorners(srcEdges,srcGry);
+//        Mat ROI = srcEdges.submat(0, 100, 0, 100);
+        if(true) return srcEdges;
 
 //        if(true)throw new ImageProcessException("0");
 
@@ -313,6 +342,8 @@ public class ImageParser {
 
         return color;
     }
+
+
     private Mat addImageOnExisting(Mat src, Rectangle rect, Mat image){
         //points are in order  top-left, top-right, bottom-right, bottom-left
 
@@ -709,7 +740,7 @@ public class ImageParser {
         return rectangles;
     }
 
-    private ArrayList<LineSegment> findLines(Mat src2){
+    public static ArrayList<LineSegment> findLines(Mat src2){
         Mat src = src2.clone();
 //        src = dilate(src,1);
 //        MainActivity.setDebugImage(src,0);
@@ -918,7 +949,7 @@ public class ImageParser {
 
 
     //Erosion and Dilation
-    private Mat erode(Mat src, int erosion_size){
+    public static Mat erode(Mat src, int erosion_size){
         Mat src_mat=new Mat(src.size(),CvType.CV_8UC1,new Scalar(0,0,0,0));
         Imgproc.erode(src,src_mat,Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE,
                 new Size( 2*erosion_size + 1, 2*erosion_size+1 ),
@@ -926,7 +957,7 @@ public class ImageParser {
 
         return src_mat;
     }
-    private Mat dilate(Mat src, int erosion_size){
+    public static Mat dilate(Mat src, int erosion_size){
         Mat src_mat=new Mat(src.size(),CvType.CV_8UC1,new Scalar(0,0,0,0));
         Imgproc.dilate(src, src_mat, Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE,
                 new Size(2 * erosion_size + 1, 2 * erosion_size + 1),
