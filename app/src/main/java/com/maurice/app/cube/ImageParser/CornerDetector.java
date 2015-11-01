@@ -131,11 +131,11 @@ public class CornerDetector {
                 return findSumForRow(row, srcGry) >= 1;
             }
         }, 0, srcGry.rows());
-        lastRow = lastRow+2;
+        lastRow = lastRow+1;
         if(lastRow<0) lastRow = 0; if(lastRow>srcEdges.rows()-1) lastRow = srcEdges.rows()-1;
         int lastCol = 0;
         for(int i=0;i<srcGry.cols();i++){
-            if(srcGry.get(lastRow,i)[0]!=0) {lastCol = i;break;}
+            if(srcEdges.get(lastRow,i)[0]!=0) {lastCol = i;break;}
         }
 
         //Find top most point
@@ -145,7 +145,6 @@ public class CornerDetector {
                 return findSumForCol(col, srcGry) <= 1;
             }
         }, 0, srcGry.cols());
-        topCol = topCol;
         if(topCol<0) topCol = 0; if(topCol>srcEdges.cols()-1) topCol = srcEdges.cols()-1;
         int topRow = 0;
         for(int i=0;i<srcGry.rows();i++){
@@ -156,14 +155,14 @@ public class CornerDetector {
         int bottomCol = findColWithOptimisation(srcEdges, new Optimiser() {
             @Override
             public boolean goLeft(int col, Mat srcGry) {
-                return findSumForCol(col, srcGry) >= 1;
+                return findSumForCol(col, srcGry) > 1;
             }
         }, 0, srcGry.cols());
-        bottomCol = bottomCol+2;
+        bottomCol = bottomCol+1;
         if(bottomCol<0) bottomCol = 0; if(bottomCol>srcEdges.cols()-1) bottomCol = srcEdges.cols()-1;
         int bottomRow = 0;
         for(int i=0;i<srcGry.rows();i++){
-            if(srcGry.get(i,bottomCol)[0]!=0) {bottomRow = i;break;}
+            if(srcEdges.get(i,bottomCol)[0]!=0) {bottomRow = i;break;}
         }
 
         Mat color0 = new Mat();
