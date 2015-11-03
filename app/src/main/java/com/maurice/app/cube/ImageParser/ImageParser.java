@@ -197,20 +197,100 @@ public class ImageParser {
 
         //Grey image
         Mat srcGry = src.clone();
-        List<Mat> channels = new ArrayList<>();
-        Core.split(src, channels);
+        Mat srcHsv = src.clone();
+        Imgproc.cvtColor(src, srcHsv, Imgproc.COLOR_BGR2HSV_FULL);
+//        List<Mat> channels = new ArrayList<>();
+        List<Mat> hsvchannels = new ArrayList<>();
+//        Core.split(src, channels);//RGB fashion
+        Core.split(srcHsv, hsvchannels);
 //        Mat greenchannel = channels.get();
+//        Imgproc.threshold(channels.get(0), srcGry, 200, 255, Imgproc.THRESH_BINARY);
 //        Imgproc.cvtColor(src, srcGry, Imgproc.COLOR_RGB2GRAY);
-//        Imgproc.threshold(srcGry, srcGry, 200, 255, 0);
-//        Imgproc.adaptiveThreshold(srcGry, srcGry, 255, Imgproc.ADAPTIVE_THRESH_MEAN_C, Imgproc.THRESH_BINARY_INV, 15, 4);
-        Imgproc.threshold(channels.get(0), srcGry, 200, 255, Imgproc.THRESH_BINARY);
+//        if(true) return srcHsv;
+
+//        if(true) return srcGry;
+
+        //Find whites
+//        Mat whites = src.clone();
+//        Imgproc.threshold(srcGry, whites, 255 * 0.62, 255, Imgproc.THRESH_BINARY);
+
+
+        //Find Blacks
+//        Mat blacks = src.clone();
+//        Imgproc.threshold(srcGry, blacks, 255 * CameraActivity.seek, 255, Imgproc.THRESH_BINARY_INV);//0.67
+
+        //remove large blacks
+//        Mat blacks2 = erode(blacks, (int) (50 * 0.12));
+//        blacks2 = dilate(blacks2, (int) (50 * 0.12));
+//        Core.bitwise_xor(blacks, blacks2, blacks);
+
+        //remove smaller ones
+//        blacks = erode(blacks, (int) (50 * 0.03));
+//        blacks = dilate(blacks, (int) (50 * 0.03));
+
+//        if(true) return blacks;
+
+        //remove blacks not near white
+//        Mat whites2 = dilate(whites, (int) (30 * 0.15));
+//        Core.bitwise_and(blacks, whites2, blacks);
+
+
+        //find colors
+//        Mat reds = srcGry.clone();
+//        Imgproc.threshold(hsvchannels.get(1), reds, 255 * 0.80, 255, Imgproc.THRESH_BINARY);//0.67
+//        Mat greens = srcGry.clone();
+//        Imgproc.threshold(hsvchannels.get(0), greens, 255 * CameraActivity.seek, 255, Imgproc.THRESH_BINARY);//0.48
+//        Mat blues = srcGry.clone();
+//        Imgproc.threshold(channels.get(2), blues, 255 * CameraActivity.seek, 255, Imgproc.THRESH_BINARY);
+//
+//        //find pure reds
+//        Mat purered = reds.clone();
+//        Mat greenAndBlue = reds.clone();
+//        Core.bitwise_or(greens, blues, greenAndBlue);
+//        Core.bitwise_xor(reds, greenAndBlue, purered);
+//        Core.bitwise_and(purered, reds, purered);
+
+
+//        int range = 40;
+        Mat purereds = src.clone();
+        Mat purereds2 = src.clone();
+        Imgproc.threshold(hsvchannels.get(0), purereds, 255 * 0.62, 255, Imgproc.THRESH_BINARY);
+        Imgproc.threshold(hsvchannels.get(0), purereds2, 255 * 0.69, 255, Imgproc.THRESH_BINARY_INV);
+        Core.bitwise_and(purereds, purereds2, purereds);
+        Mat brightness = src.clone();
+        Imgproc.threshold(hsvchannels.get(2), brightness, 255 * 0.31, 255, Imgproc.THRESH_BINARY);
+
+
+        purereds = erode(purereds, 4);
+        purereds = dilate(purereds, 4);
+        Core.bitwise_and(purereds, brightness, purereds);
+        if(true) return purereds;
+//        purered = erode(purered, 1);
+//        purered = dilate(purered, 3);
+//        //remove large red dots
+//        Mat purered2 = erode(purered, (int) (50 * 0.12));
+//        purered2 = dilate(purered2, (int) (50 * 0.12));
+//        Core.bitwise_xor(purered, purered2, purered);
+////        if(true) return purered;
+//
+//        //Find reds near whites and blacks
+//        Mat overlap1 = reds.clone();
+//        Core.bitwise_and(dilate(blacks, (int) (30 * 0.08)), dilate(purered, (int) (30 * 0.08)), overlap1);
+//        Core.bitwise_and(overlap1, dilate(purered, (int) (30 * 0.08)), overlap1);
+
+
+
+
+//        Imgproc.threshold(srcGry, srcGry, 100, 255, Imgproc.THRESH_BINARY_INV);
+//        Imgproc.adaptiveThreshold(srcGry, whites, 255, Imgproc.ADAPTIVE_THRESH_MEAN_C, Imgproc.THRESH_BINARY, 45, 44);
+//        if(true) return overlap1;
 
 
         //remove grains
         Mat temp;
-        temp = erode(srcGry,3);
-        temp = dilate(temp, 6);
-        Core.bitwise_and(srcGry, temp,srcGry);
+//        temp = erode(srcGry,3);
+//        temp = dilate(temp, 6);
+//        Core.bitwise_and(srcGry, temp,srcGry);
 
 
 
@@ -240,23 +320,23 @@ public class ImageParser {
 
         /// Canny detector
         Mat srcEdges = new Mat(srcGry.size(), CvType.CV_8UC1);
-        int lowThreshold = 5;
-        int maxThreshold = 300;
-        int kernel_size = 3;
-        Imgproc.Canny(srcGry, srcEdges, lowThreshold, maxThreshold, kernel_size,true);
-//        srcEdges = dilate(srcEdges,1);
-//        MainActivity.setDebugImage(srcEdges, 2);
+//        int lowThreshold = 5;
+//        int maxThreshold = 300;
+//        int kernel_size = 3;
+//        Imgproc.Canny(srcGry, srcEdges, lowThreshold, maxThreshold, kernel_size,true);
+////        srcEdges = dilate(srcEdges,1);
+////        MainActivity.setDebugImage(srcEdges, 2);
 
 
 
-        //Corners Detect
+//        //Corners Detect
         Rectangle corners = CornerDetector.findCorners(srcEdges,srcGry);
         Mat color1 = src.clone();
-//        Imgproc.cvtColor(srcGry, color1, Imgproc.COLOR_GRAY2BGR);
-        GenUtils.drawPoint(color1, corners.lb, new Scalar(255, 0, 0));
-        GenUtils.drawPoint(color1, corners.lt, new Scalar(0, 255, 0));
-        GenUtils.drawPoint(color1, corners.rb, new Scalar(255, 255, 0));
-        GenUtils.drawPoint(color1, corners.rt, new Scalar(0, 255, 255));
+////        Imgproc.cvtColor(srcGry, color1, Imgproc.COLOR_GRAY2BGR);
+//        GenUtils.drawPoint(color1, corners.lb, new Scalar(255, 0, 0));
+//        GenUtils.drawPoint(color1, corners.lt, new Scalar(0, 255, 0));
+//        GenUtils.drawPoint(color1, corners.rb, new Scalar(255, 255, 0));
+//        GenUtils.drawPoint(color1, corners.rt, new Scalar(0, 255, 255));
 
 
         //Draw image on top

@@ -6,6 +6,7 @@ import android.util.Log;
 import android.view.MenuItem;
 import android.view.SurfaceView;
 import android.view.WindowManager;
+import android.widget.SeekBar;
 
 import com.maurice.app.cube.ImageParser.ImageParser;
 import com.maurice.app.cube.utils.Logg;
@@ -26,6 +27,8 @@ public class CameraActivity extends Activity implements CvCameraViewListener2 {
     private MenuItem             mItemSwitchCamera = null;
 
     ImageParser imageParser;
+    SeekBar seekBar;
+    public static double seek = 0.5;
 
     private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
         @Override
@@ -63,6 +66,20 @@ public class CameraActivity extends Activity implements CvCameraViewListener2 {
         mOpenCvCameraView.setVisibility(SurfaceView.VISIBLE);
 
         mOpenCvCameraView.setCvCameraViewListener(this);
+
+        seekBar = (SeekBar) findViewById(R.id.seekBar);
+        seekBar.setMax(100);
+        seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                Logg.d("SEEK","progress : "+progress);
+                seek = ((double)progress)/100;
+            }
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {}
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {}
+        });
     }
 
     @Override
