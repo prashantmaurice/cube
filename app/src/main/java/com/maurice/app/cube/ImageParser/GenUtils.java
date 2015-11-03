@@ -13,6 +13,7 @@ import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.Point;
 import org.opencv.core.Scalar;
+import org.opencv.imgproc.Imgproc;
 
 import java.util.Arrays;
 
@@ -157,5 +158,8 @@ public class GenUtils {
                 (((x1-x2)*(y3-y4)-(y1-y2)*(x3-x4)));
         Logg.d("INTERSECTION",(new Point(x,y)).toString());
         return new Point(x,y);
+    }
+    public static void drawPoint(Mat mat, Point point, Scalar color){
+        Imgproc.line(mat, point, new Point(point.x + 1, point.y), color, 3);
     }
 }

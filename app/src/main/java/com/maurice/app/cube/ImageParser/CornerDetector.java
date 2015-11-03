@@ -1,11 +1,10 @@
 package com.maurice.app.cube.ImageParser;
 
+import com.maurice.app.cube.ImageParser.models.Rectangle;
 import com.maurice.app.cube.utils.Logg;
 
 import org.opencv.core.Mat;
 import org.opencv.core.Point;
-import org.opencv.core.Scalar;
-import org.opencv.imgproc.Imgproc;
 
 import java.util.ArrayList;
 
@@ -47,9 +46,14 @@ public class CornerDetector {
      *
      * @param srcGry : this is a  canny detector result
      */
-    public static Mat findCorners(Mat srcEdges, Mat srcGry) {
+    public static Rectangle findCorners(Mat srcEdges, Mat srcGry) {
+        Rectangle corners = findThroughQuardilateralApproach(srcEdges, srcGry);
+        return corners;
 
-        if(true) return findThroughQuardilateralApproach(srcEdges,srcGry);
+//        color = ImageParser.addImageOnExisting(src, rect, imageMat);
+
+
+//        if(true) return findThroughQuardilateralApproach(srcEdges,srcGry);
 
 
 
@@ -77,40 +81,40 @@ public class CornerDetector {
 
 
 
-        Mat dilatedEdges = ImageParser.dilate(srcEdges,2);
-//        Mat eroded = srcEdges.clone();
-        long start = System.currentTimeMillis();
-        int count = 0;
-        Mat color0 = new Mat();
-        Imgproc.cvtColor(srcEdges, color0, Imgproc.COLOR_GRAY2BGR);
-        for(int i=CIRCLE_RADIUS;i<srcGry.rows()-CIRCLE_RADIUS;i=i+4){
-            for(int j=CIRCLE_RADIUS;j<srcGry.cols()-CIRCLE_RADIUS;j=j+4){
-
-//                ArrayList<Integer> values = getOutBoundArr(new Point(i, j), srcGry);
-
-//                Logg.d("DEBUGHH","is : "+srcGry.get(i,j)[0]);
-//                if(dilatedEdges.get(i,j)[0]>=200){
-//                    boolean isCorner = isPointCorner(new Point(j, i), srcGry);
+//        Mat dilatedEdges = ImageParser.dilate(srcEdges,2);
+////        Mat eroded = srcEdges.clone();
+//        long start = System.currentTimeMillis();
+//        int count = 0;
+//        Mat color0 = new Mat();
+//        Imgproc.cvtColor(srcEdges, color0, Imgproc.COLOR_GRAY2BGR);
+//        for(int i=CIRCLE_RADIUS;i<srcGry.rows()-CIRCLE_RADIUS;i=i+4){
+//            for(int j=CIRCLE_RADIUS;j<srcGry.cols()-CIRCLE_RADIUS;j=j+4){
 //
-//                    if(isCorner){
-//                        if(count++>50) break;
-//                        Logg.d("DEBUGHH", "match : " + (new Point(i, j)).toString() + " : " + srcGry.get(i, j)[0]);
-                        Imgproc.line(color0, new Point(j, i), new Point(j + 1, i), new Scalar(dilatedEdges.get(i,j)[0],0,0), 3);
-//                    }else{
-//                        Imgproc.line(color0, new Point(j, i), new Point(j + 1, i), new Scalar(100,100,100), 3);
-//                    }
-//                }
-            }
-        }
-        Logg.d("DEBUGTTTT",count+"Corners found in  : "+(System.currentTimeMillis()-start)+" ms");
-        return color0;
+////                ArrayList<Integer> values = getOutBoundArr(new Point(i, j), srcGry);
+//
+////                Logg.d("DEBUGHH","is : "+srcGry.get(i,j)[0]);
+////                if(dilatedEdges.get(i,j)[0]>=200){
+////                    boolean isCorner = isPointCorner(new Point(j, i), srcGry);
+////
+////                    if(isCorner){
+////                        if(count++>50) break;
+////                        Logg.d("DEBUGHH", "match : " + (new Point(i, j)).toString() + " : " + srcGry.get(i, j)[0]);
+//                        Imgproc.line(color0, new Point(j, i), new Point(j + 1, i), new Scalar(dilatedEdges.get(i,j)[0],0,0), 3);
+////                    }else{
+////                        Imgproc.line(color0, new Point(j, i), new Point(j + 1, i), new Scalar(100,100,100), 3);
+////                    }
+////                }
+//            }
+//        }
+//        Logg.d("DEBUGTTTT",count+"Corners found in  : "+(System.currentTimeMillis()-start)+" ms");
+//        return color0;
     }
 
     private static interface Optimiser{
         boolean goLeft(int value, Mat srcGry);
     }
 
-    private static Mat findThroughQuardilateralApproach(Mat srcEdges,Mat srcGry) {
+    private static Rectangle findThroughQuardilateralApproach(Mat srcEdges, Mat srcGry) {
 
         //Find Left most point
         int firstRow = findRowWithOptimisation(srcEdges, new Optimiser() {
@@ -165,12 +169,20 @@ public class CornerDetector {
             if(srcEdges.get(i,bottomCol)[0]!=0) {bottomRow = i;break;}
         }
 
-        Mat color0 = new Mat();
-        Imgproc.cvtColor(srcEdges, color0, Imgproc.COLOR_GRAY2BGR);
-        drawPoint(color0, new Point(firstCol, firstRow), new Scalar(255, 0, 0));
-        drawPoint(color0, new Point(lastCol, lastRow),new Scalar(0,255,0));
-        drawPoint(color0, new Point(topCol, topRow),new Scalar(255,255,0));
-        drawPoint(color0, new Point(bottomCol, bottomRow),new Scalar(0,255,255));
+//        Mat color0 = new Mat();
+//        Imgproc.cvtColor(srcEdges, color0, Imgproc.COLOR_GRAY2BGR);
+//        drawPoint(color0, new Point(firstCol, firstRow), new Scalar(255, 0, 0));
+//        drawPoint(color0, new Point(lastCol, lastRow),new Scalar(0,255,0));
+//        drawPoint(color0, new Point(topCol, topRow),new Scalar(255,255,0));
+//        drawPoint(color0, new Point(bottomCol, bottomRow),new Scalar(0,255,255));
+
+
+        Rectangle rect = new Rectangle(
+                new Point(topCol, topRow),
+                new Point(lastCol, lastRow),
+                new Point(firstCol, firstRow),
+                new Point(bottomCol, bottomRow));
+        return rect;
 //        drawPoint(color0, new Point(lastCol1, lastRow),new Scalar(0,255,255));
 //        drawPoint(color0, new Point(lastCol2, lastRow),new Scalar(255,255,0));
 
@@ -178,12 +190,9 @@ public class CornerDetector {
 
 
 
-        return color0;
+//        return color0;
     }
 
-    private static void drawPoint(Mat mat, Point point, Scalar color){
-        Imgproc.line(mat, point, new Point(point.x + 1, point.y), color, 3);
-    }
 
     private static int findRowWithOptimisation(Mat srcGry,Optimiser optimiser, int left, int right) {
         if(Math.abs(right-left)<2) return left;//terminating

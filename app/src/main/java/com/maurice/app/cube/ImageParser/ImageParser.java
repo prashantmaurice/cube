@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.List;
 
 
 /**
@@ -56,7 +57,8 @@ public class ImageParser {
     static int IMAGE_HEIGHT = 100;
 
     Rectangle[][] rectangles;
-
+    static GifController gifController;
+    Mat image;//Image to be printed on screen
 
 
     private ImageParser(Context context){
@@ -65,6 +67,9 @@ public class ImageParser {
 
     public static ImageParser getInstance(Context context){
         if(instance==null) instance = new ImageParser(context);
+//        Bitmap bitmap = BitmapFactory.decodeResource(context.getResources(), R.drawable.image);
+//        Mat imageMat = GenUtils.convertBitmapToMat(bitmap);
+//        gifController = GifController.getInstance(context);
         return instance;
     }
 
@@ -192,16 +197,30 @@ public class ImageParser {
 
         //Grey image
         Mat srcGry = src.clone();
-        Imgproc.cvtColor(src, srcGry, Imgproc.COLOR_RGB2GRAY);
+        List<Mat> channels = new ArrayList<>();
+        Core.split(src, channels);
+//        Mat greenchannel = channels.get();
+//        Imgproc.cvtColor(src, srcGry, Imgproc.COLOR_RGB2GRAY);
 //        Imgproc.threshold(srcGry, srcGry, 200, 255, 0);
 //        Imgproc.adaptiveThreshold(srcGry, srcGry, 255, Imgproc.ADAPTIVE_THRESH_MEAN_C, Imgproc.THRESH_BINARY_INV, 15, 4);
-        Imgproc.threshold(srcGry, srcGry, 160, 255, Imgproc.THRESH_BINARY);
+        Imgproc.threshold(channels.get(0), srcGry, 200, 255, Imgproc.THRESH_BINARY);
+
+
+        //remove grains
+        Mat temp;
+        temp = erode(srcGry,3);
+        temp = dilate(temp, 6);
+        Core.bitwise_and(srcGry, temp,srcGry);
+
+
+
+//        if(true)return srcGry;
 
 
 //        Imgproc.cornerHarris(srcGry, srcGry, 20, 3, 44);
 //        if(true)return srcGry;
 
-        MainActivity.setDebugImage(srcGry,0);
+//        MainActivity.setDebugImage(srcGry,0);
 
         //Blur the image
 //        int blurRadius = (int) (units*1);
@@ -231,9 +250,27 @@ public class ImageParser {
 
 
         //Corners Detect
-        srcEdges = CornerDetector.findCorners(srcEdges,srcGry);
+        Rectangle corners = CornerDetector.findCorners(srcEdges,srcGry);
+        Mat color1 = src.clone();
+//        Imgproc.cvtColor(srcGry, color1, Imgproc.COLOR_GRAY2BGR);
+        GenUtils.drawPoint(color1, corners.lb, new Scalar(255, 0, 0));
+        GenUtils.drawPoint(color1, corners.lt, new Scalar(0, 255, 0));
+        GenUtils.drawPoint(color1, corners.rb, new Scalar(255, 255, 0));
+        GenUtils.drawPoint(color1, corners.rt, new Scalar(0, 255, 255));
+
+
+        //Draw image on top
+//        gifController.get(0);
+        if(image==null){
+            Bitmap bitmap = BitmapFactory.decodeResource(mContext.getResources(), R.drawable.image);
+            image = GenUtils.convertBitmapToMat(bitmap);
+        }
+        Mat color2 = addImageOnExisting(color1, corners, image);
+
+
+
 //        Mat ROI = srcEdges.submat(0, 100, 0, 100);
-        if(true) return srcEdges;
+        if(true) return color2;
 
 //        if(true)throw new ImageProcessException("0");
 
@@ -295,8 +332,8 @@ public class ImageParser {
 
 
         //Get image that needs to be displayed inside box
-        Bitmap bitmap = BitmapFactory.decodeResource(mContext.getResources(), R.drawable.image);
-        Mat imageMat = GenUtils.convertBitmapToMat(bitmap);
+//        Bitmap bitmap = BitmapFactory.decodeResource(mContext.getResources(), R.drawable.image);
+//        Mat imageMat = GenUtils.convertBitmapToMat(bitmap);
 
 //        MatOfPoint2f obj = new MatOfPoint2f();
 //        obj.fromList(objList);
@@ -333,8 +370,8 @@ public class ImageParser {
 
 
 
-        color = addImageOnExisting(src, rect, imageMat);
-        MainActivity.setDebugImage(color, 0);
+//        color = addImageOnExisting(src, rect, imageMat);
+//        MainActivity.setDebugImage(color, 0);
 
 
 
@@ -344,62 +381,49 @@ public class ImageParser {
     }
 
 
-    private Mat addImageOnExisting(Mat src, Rectangle rect, Mat image){
+    public static Mat addImageOnExisting(Mat src, Rectangle rect, Mat image){
+
         //points are in order  top-left, top-right, bottom-right, bottom-left
 
-        Mat src_mat=new Mat(4,1,CvType.CV_32FC2);
-        Mat dst_mat=new Mat(4,1,CvType.CV_32FC2);
+//        Mat src_mat=new Mat(4,1,CvType.CV_32FC2);
+//        Mat dst_mat=new Mat(4,1,CvType.CV_32FC2);
 
-        Rectangle srcR = new Rectangle(128);
+//        Rectangle srcR = new Rectangle(128);
 
-        src_mat.put(0, 0, srcR.lt.x, srcR.lt.y, srcR.rt.x, srcR.rt.y, srcR.lb.x, srcR.lb.y, srcR.rb.x, srcR.rb.y);
-        dst_mat.put(0, 0, srcR.lt.x, srcR.lt.y, srcR.rt.x, srcR.rt.y, srcR.lb.x, srcR.lb.y, rect.rb.x, srcR.rb.y);
-//        dst_mat.put(0, 0, rect.lt.x, rect.lt.y, rect.rt.x, rect.rt.y, rect.lb.x, rect.lb.y, rect.rb.x, rect.rb.y);
-        Mat perspectiveTransform=Imgproc.getPerspectiveTransform(src_mat, dst_mat);
-        Mat dst=src.clone();
+//        src_mat.put(0, 0, srcR.lt.x, srcR.lt.y, srcR.rt.x, srcR.rt.y, srcR.lb.x, srcR.lb.y, srcR.rb.x, srcR.rb.y);
+//        dst_mat.put(0, 0, srcR.lt.x, srcR.lt.y, srcR.rt.x, srcR.rt.y, srcR.lb.x, srcR.lb.y, rect.rb.x, srcR.rb.y);
 
-
-        Imgproc.warpPerspective(image, dst, perspectiveTransform, src.size());
-//        src.copyTo();
-
-        //TEST2
-
-        Point[] dstPoints = new Point[4];
-        int w1 = 200;
-        int h1 = 200;
-        dstPoints[0] = new Point(10, 0);
-        dstPoints[1] = new Point(w1, 0);
-        dstPoints[2] = new Point(w1, h1);
-        dstPoints[3] = new Point(0, h1);
-
-        MatOfPoint2f canonicalMarker = new MatOfPoint2f();
-        canonicalMarker.fromArray(dstPoints);
-
-        Point[] points = new Point[4];
-        int w2 = 200;
-        int h2 = 200;
-        points[0] = new Point(0, 0);
-        points[1] = new Point(w2, 0);
-        points[2] = new Point(w2, h2);
-        points[3] = new Point(0, h2);
-        MatOfPoint2f marker = new MatOfPoint2f(points);
-        Mat trans = Imgproc.getPerspectiveTransform(marker, canonicalMarker);
-        Imgproc.warpPerspective(src, dst, trans, new Size(800, 800));
-        MainActivity.setDebugImage(dst, 1);
+//        Point[] dstPoints = new Point[4];
+//        int w1 = 200;
+//        int h1 = 200;
+//        dstPoints[0] = new Point(10, 0);
+//        dstPoints[1] = new Point(w1, 0);
+//        dstPoints[2] = new Point(w1, h1);
+//        dstPoints[3] = new Point(0, h1);
+//
+//        MatOfPoint2f canonicalMarker = new MatOfPoint2f();
+//        canonicalMarker.fromArray(dstPoints);
 
         ArrayList<Point> points2 = new ArrayList<>();
         points2.add(new Point(rect.rt.x,rect.rt.y));//top right
         points2.add(new Point(rect.lt.x,rect.lt.y));//top left
         points2.add(new Point(rect.lb.x,rect.lb.y));//bottom left
-        points2.add(new Point(rect.rb.x,rect.rb.y));//bottom right
-        dst = warpPerspective(points2,src,400,400);
-        MainActivity.setDebugImage(dst, 1);
+        points2.add(new Point(rect.rb.x, rect.rb.y));//bottom right
 
-        Mat dst2 = src.clone();
+//        Logg.d("GGGGGG", "Reach1 : " + (System.currentTimeMillis() - start));
+        Mat dst;
         dst = warpPerspective2(points2,image,src.width(),src.height(),image.width(),image.height());
-        MainActivity.setDebugImage(dst, 3);
-        Core.add(src, dst, dst2);
-        MainActivity.setDebugImage(dst2, 5);
+//        Logg.d("GGGGGG", "Reach9 : " + (System.currentTimeMillis() - start));
+//        Mat dst2 = src.clone();
+//        Core.add(src, dst, dst2);
+
+        //Add both
+        long start = System.currentTimeMillis();
+        src = addImages(src,dst);
+
+
+        Logg.d("GGGGGG", "Reach4 : " + (System.currentTimeMillis() - start));
+        if(true)return src;
 
 
 //        Calib3d.findHomography(p, h, p2h);
@@ -431,11 +455,34 @@ public class ImageParser {
 
     }
 
+
+    static Mat addImages(Mat src, Mat dst){
+        long start = System.currentTimeMillis();
+//        for(int i=0;i<src.rows();i++){
+//            for(int j=0;j<src.cols();j++){
+//                if(dst.get(i,j)[0]!=0){
+//                    src.put(i,j,dst.get(i,j));
+//                }
+//            }
+//        }
+//        Mat img2gray = new Mat(dst.size(),CvType.CV_8UC1);
+//        Mat mask = img2gray.clone();
+//        Imgproc.cvtColor(dst,img2gray,Imgproc.COLOR_BGR2GRAY);
+//        Imgproc.threshold(img2gray, mask, 10, 255, Imgproc.THRESH_BINARY_INV);
+//
+//        Imgproc.cvtColor(mask, mask, Imgproc.COLOR_GRAY2BGR);
+//        Core.bitwise_and(img2gray, mask, src);
+        Core.addWeighted(src,0.3,dst,0.3,1,src);
+//        Core.add(src, dst, src);
+
+        return src;
+    }
+
 //    Mat doOpposite(Rectangle rect, Mat mat){
 //
 //    }
 
-    Mat getPerspectiveTransformation2(ArrayList<Point> inputPoints, int w, int h) {
+    static Mat getPerspectiveTransformation2(ArrayList<Point> inputPoints, int w, int h) {
         Point[] canonicalPoints = new Point[4];
         canonicalPoints[0] = new Point(w, 0);
         canonicalPoints[1] = new Point(0, 0);
@@ -453,14 +500,15 @@ public class ImageParser {
         return Imgproc.getPerspectiveTransform(canonicalMarker,marker);
     }
 
-    Mat warpPerspective2(ArrayList<Point> inputPoints, Mat mat, int w, int h,int width, int height) {
+    static Mat warpPerspective2(ArrayList<Point> inputPoints, Mat mat, int w, int h, int width, int height) {
+        long start = System.currentTimeMillis();
         Mat transform = getPerspectiveTransformation2(inputPoints, width, height);
         Mat unWarpedMarker = new Mat(w, h, CvType.CV_8UC1);
         Imgproc.warpPerspective(mat, unWarpedMarker, transform, new Size(w, h));
         return unWarpedMarker;
     }
 
-    Mat getPerspectiveTransformation(ArrayList<Point> inputPoints, int w, int h) {
+    static Mat getPerspectiveTransformation(ArrayList<Point> inputPoints, int w, int h) {
         Point[] canonicalPoints = new Point[4];
         canonicalPoints[0] = new Point(w, 0);
         canonicalPoints[1] = new Point(0, 0);
@@ -478,7 +526,7 @@ public class ImageParser {
         return Imgproc.getPerspectiveTransform(marker, canonicalMarker);
     }
 
-    Mat warpPerspective(ArrayList<Point> inputPoints, Mat mat, int w, int h) {
+    static Mat warpPerspective(ArrayList<Point> inputPoints, Mat mat, int w, int h) {
         Mat transform = getPerspectiveTransformation(inputPoints, w, h);
         Mat unWarpedMarker = new Mat(w, h, CvType.CV_8UC1);
         Imgproc.warpPerspective(mat, unWarpedMarker, transform, new Size(w, h));
