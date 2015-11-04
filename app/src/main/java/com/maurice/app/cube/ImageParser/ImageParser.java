@@ -551,6 +551,18 @@ public class ImageParser {
         Logg.d("CONTOUR", "screen size2 : " + screenContourRect.rows());
 
 
+        //Find homography
+//        Calib3d.findHomography(screenContourRect2F,)
+        
+
+        if(image==null){
+            Bitmap bitmap = BitmapFactory.decodeResource(mContext.getResources(), R.drawable.image);
+            image = GenUtils.convertBitmapToMat(bitmap);
+        }
+        Mat color2 = addImageOnExisting(src, rect, image);
+        if(true) return color2;
+//        addImageOnExisting()
+
 
         //Main
 //        Imgproc.drawContours(srcGryColor, contoursList, 0, new Scalar(0,125,0));
