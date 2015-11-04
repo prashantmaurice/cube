@@ -194,6 +194,13 @@ public class ImageParser {
 //        Core.bitwise_and(src,mask, src);
 //        if(true)return mask;
 
+        //Color detector
+        Mat srcDetect = src.clone();
+        double[] center = src.get(src.rows() / 2, src.cols() / 2);
+        Imgproc.line(srcDetect, new Point(src.cols() / 2, src.rows() / 2), new Point(src.cols() / 2, (src.rows() / 2) + 1), new Scalar(255, 255, 255), 4);
+        Imgproc.putText(srcDetect, "" + Arrays.toString(center), new Point(0,100), Core.FONT_HERSHEY_SIMPLEX, 0.3, new Scalar(10, 10, 150, 100),1);
+        if(true) return srcDetect;
+
 
         //Grey image
         Mat srcGry = src.clone();
