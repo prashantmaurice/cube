@@ -5,6 +5,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.util.Log;
 
+import com.maurice.app.cube.CameraActivity;
 import com.maurice.app.cube.ImageParser.models.LineSegment;
 import com.maurice.app.cube.ImageParser.models.Rectangle;
 import com.maurice.app.cube.ImageProcessException;
@@ -28,7 +29,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 
 /**
@@ -193,6 +196,12 @@ public class ImageParser {
 //        //Bitwise-AND mask and original image
 //        Core.bitwise_and(src,mask, src);
 //        if(true)return mask;
+
+
+        if(true) return findMarkers(src);
+
+//        if(true) return findFromWhiteMarkers(src);
+
 
         //Color detector
         Mat srcDetect = src.clone();
@@ -465,6 +474,92 @@ public class ImageParser {
 
 
         return color;
+    }
+
+    private Mat findFromWhiteMarkers(Mat src) {
+        //Find gray image
+        Mat srcGry = src.clone();
+        Mat srcGryColor = src.clone();//used for overlaying stuff
+        Imgproc.cvtColor(src, srcGry, Imgproc.COLOR_RGB2GRAY);
+        Imgproc.cvtColor(srcGry, srcGryColor, Imgproc.COLOR_GRAY2BGR);
+
+        //Find binary image
+        Mat srcBin = srcGry.clone();
+        Imgproc.threshold(srcGry, srcBin, 255 * CameraActivity.seek, 255, Imgproc.THRESH_BINARY);
+        return srcBin;
+    }
+
+    private Mat findMarkers(Mat src) {
+
+        //Find gray image
+        Mat srcGry = src.clone();
+        Mat srcGryColor = src.clone();//used for overlaying stuff
+        Imgproc.cvtColor(src, srcGry, Imgproc.COLOR_RGB2GRAY);
+        Imgproc.cvtColor(srcGry, srcGryColor, Imgproc.COLOR_GRAY2BGR);
+
+        //Find binary image
+        Mat srcBin = srcGry.clone();
+        Imgproc.threshold(srcGry, srcBin, 255 * 0.5, 255, Imgproc.THRESH_BINARY);
+
+        //Find contours
+        Mat hierarchy = srcGry.clone();
+        List<MatOfPoint> contoursList = new ArrayList<>() ;
+//        Imgproc.CV_RETR_TREE ==3
+        //Imgproc.CV_CHAIN_APPROX_SIMPLE ==2
+        Imgproc.findContours(srcBin, contoursList, hierarchy, 3, 2, new Point(0, 0));
+        if(contoursList.size()==0) return srcGry;
+
+
+        //Find areas of contours
+        final Map<MatOfPoint, Double> areas = new HashMap<>();
+        for(MatOfPoint matOfPoint : contoursList){
+            areas.put(matOfPoint, Imgproc.contourArea(matOfPoint));
+        }
+
+        //Find biggest contour
+        Collections.sort(contoursList, new Comparator<MatOfPoint>() {
+            @Override
+            public int compare(MatOfPoint lhs, MatOfPoint rhs) {
+                if(areas.get(lhs).equals(areas.get(rhs))) return 0;
+                return (areas.get(lhs)<areas.get(rhs))?1:-1;
+            }
+        });
+        MatOfPoint screenContour = contoursList.get(0);
+        Logg.d("CONTOUR","screen size : "+screenContour.rows());
+
+
+        //Approx to a rectangle
+        MatOfPoint screenContourRect = new MatOfPoint();
+        MatOfPoint2f screenContourRect2F = new MatOfPoint2f();
+        MatOfPoint2f screenContour2F = new MatOfPoint2f();
+        screenContour.convertTo(screenContour2F, CvType.CV_32FC2);
+        Imgproc.approxPolyDP(screenContour2F, screenContourRect2F, 10, true);
+        screenContourRect2F.convertTo(screenContourRect, CvType.CV_32S);
+        if(screenContourRect.rows()!=4) return srcGry;
+
+        //Find rectangle and draw
+        Rectangle rect = new Rectangle(screenContourRect);
+        Scalar color = new Scalar(255, 0,0);
+        for(int i=0;i<4;i++){
+            Imgproc.line(srcGryColor, rect.lb, rect.lt, color, 2);
+            Imgproc.line(srcGryColor, rect.lb, rect.rb, color, 2);
+            Imgproc.line(srcGryColor, rect.rb, rect.rt, color, 2);
+            Imgproc.line(srcGryColor, rect.rt, rect.lt, color, 2);
+        }
+
+
+        Logg.d("CONTOUR", "screen size2 : " + screenContourRect.rows());
+
+
+
+        //Main
+//        Imgproc.drawContours(srcGryColor, contoursList, 0, new Scalar(0,125,0));
+
+        if(true) return srcGryColor;
+
+
+
+        return null;
     }
 
 
