@@ -45,6 +45,35 @@ public class Rectangle {
             this.rb = new Point(matOfPoint.get(2,0)[0],matOfPoint.get(2,0)[1]);
             this.lb = new Point(matOfPoint.get(3,0)[0],matOfPoint.get(3,0)[1]);
         }
+
+
+
+
+        //sort
+        sortRectangle();
+    }
+
+    public void sortRectangle(){
+        if(lt.y<rt.y){
+            Point temp = lt;
+            lt = rt;
+            rt = temp;
+        }
+        if(lb.y<rb.y){
+            Point temp = lb;
+            lb = rb;
+            rb = temp;
+        }
+        if(lt.x>lb.x){
+            Point temp = lt;
+            lt = lb;
+            lb = temp;
+        }
+        if(rt.x>rb.x){
+            Point temp = rt;
+            rt = rb;
+            rb = temp;
+        }
     }
 
     public void print() {
@@ -54,4 +83,5 @@ public class Rectangle {
     public double getArea(){
         return Math.abs(((lt.x*rt.y - rt.x*lt.y) + (rt.x*rb.y - rb.x*rt.y) + (rb.x*lb.y - lb.x*rb.y) + (lb.x*lt.y - lt.x*lb.y)))/2;
     }
+
 }

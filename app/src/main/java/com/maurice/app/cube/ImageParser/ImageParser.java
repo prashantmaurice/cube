@@ -103,7 +103,7 @@ public class ImageParser {
         int width = 864;
         int height = 480;
 
-        int scale = 4;
+        int scale = 2;
         Size size = new Size(width/scale,height/scale);//the dst image size,e.g.100x100
 
         Mat dst = new Mat(size,src.type());//dst image
@@ -587,16 +587,16 @@ public class ImageParser {
         double k = 50;
         double a = k*f; //scale factor
         double s = 0;//s is the skew, only non-zero if u and v are non-perpendicular.
-        double u = image.width()/2;
-        double v = image.height()/2;
+        double u = src.width()/2;
+        double v = src.height()/2;
         intrinsic.put(0,0,a);
-        intrinsic.put(0,1,s);
-        intrinsic.put(0,2,u);
-        intrinsic.put(1,0,0);
+        intrinsic.put(1,0,s);
+        intrinsic.put(2,0,u);
+        intrinsic.put(0,1,0);
         intrinsic.put(1,1,a);
-        intrinsic.put(1,2,v);
-        intrinsic.put(2,0,0);
-        intrinsic.put(2,1,0);
+        intrinsic.put(2,1,v);
+        intrinsic.put(0,2,0);
+        intrinsic.put(1,2,0);
         intrinsic.put(2,2,1);
         int w = src.width();
         int h = src.height();
@@ -627,7 +627,9 @@ public class ImageParser {
         points2D.add(a2);
 
         //calibrateCamera(objectPoints, imagePoints, imageSize, cameraMatrix, distCoeffs, rvecs, tvecs, flags)
-        Calib3d.calibrateCamera(points3D, points2D, src.size(), intrinsic, mDistortionCoefficients, rvecs, tvecs, mFlags2);
+        Calib3d.calibrateCamera(points3D, points2D, new Size(w,h), intrinsic, mDistortionCoefficients, rvecs, tvecs);
+        Logg.d("OUTPUT4", "" + Arrays.toString(tvecs.get(0).get(0, 0)));
+        rect.print();
 
         MatOfPoint3f a3 = new MatOfPoint3f();
         a3.push_back(new MatOfPoint3f(new Point3(w, 0, 0)));
@@ -642,7 +644,7 @@ public class ImageParser {
         //projectPoints(MatOfPoint3f objectPoints, Mat rvec, Mat tvec, Mat cameraMatrix, MatOfDouble distCoeffs, MatOfPoint2f imagePoints, Mat jacobian, double aspectRatio)
 
         Calib3d.projectPoints(a3, rvecs.get(0), tvecs.get(0), intrinsic, mDistortionCoefficients, a4, jacobian, aspectRatio);
-        Logg.d("OUTPUT0", "" + rvecs.size());
+        Logg.d("OUTPUT0", "" + rect.lt.toString());
         Logg.d("OUTPUT1", "" + Arrays.toString(a2.get(0,0)));
         Logg.d("OUTPUT2", ""+Arrays.toString(a4.toArray()));
 
