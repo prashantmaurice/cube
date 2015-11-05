@@ -66,6 +66,8 @@ public class ImageParser {
     Rectangle[][] rectangles;
     static GifController gifController;
     Mat image;//Image to be printed on screen
+    Mat intrinsic;
+    MatOfDouble mDistortionCoefficients;
 
 
     private ImageParser(Context context){
@@ -494,6 +496,7 @@ public class ImageParser {
     }
 
     private Mat findMarkers(Mat src) {
+        long start = System.currentTimeMillis();
 
         //Find gray image
         Mat srcGry = src.clone();
@@ -511,7 +514,7 @@ public class ImageParser {
 //        Imgproc.CV_RETR_TREE ==3
         //Imgproc.CV_CHAIN_APPROX_SIMPLE ==2
         Imgproc.findContours(srcBin, contoursList, hierarchy, 3, 2, new Point(0, 0));
-        if(contoursList.size()==0) return srcGry;
+        if(contoursList.size()==0) return src;
 
 
         //Find areas of contours
@@ -532,6 +535,8 @@ public class ImageParser {
         Logg.d("CONTOUR","screen size : "+screenContour.rows());
 
 
+        Logg.d("REEACH1"," : "+(System.currentTimeMillis()-start)+" ms");
+
         //Approx to a rectangle
         MatOfPoint screenContourRect = new MatOfPoint();
         MatOfPoint2f screenContourRect2F = new MatOfPoint2f();
@@ -539,7 +544,7 @@ public class ImageParser {
         screenContour.convertTo(screenContour2F, CvType.CV_32FC2);
         Imgproc.approxPolyDP(screenContour2F, screenContourRect2F, 10, true);
         screenContourRect2F.convertTo(screenContourRect, CvType.CV_32S);
-        if(screenContourRect.rows()!=4) return srcGry;
+        if(screenContourRect.rows()!=4) return src;
 
         //Find rectangle and draw
         Rectangle rect = new Rectangle(screenContourRect);
@@ -551,6 +556,7 @@ public class ImageParser {
             Imgproc.line(srcGryColor, rect.rt, rect.lt, color, 2);
         }
 
+        Logg.d("REEACH2"," : "+(System.currentTimeMillis()-start)+" ms");
 
         Logg.d("CONTOUR", "screen size2 : " + screenContourRect.rows());
 
@@ -559,32 +565,37 @@ public class ImageParser {
             Bitmap bitmap = BitmapFactory.decodeResource(mContext.getResources(), R.drawable.image);
             image = GenUtils.convertBitmapToMat(bitmap);
         }
-        MatOfDouble mDistortionCoefficients = new MatOfDouble();
         ArrayList<Mat> rvecs = new ArrayList<>();
         ArrayList<Mat> tvecs = new ArrayList<>();
 
-        Mat intrinsic = new Mat(3, 3, CvType.CV_32FC1);
-        double f = 100*CameraActivity.seek;//focal length of camera
-        double k = 50;
-        double a = k*f; //scale factor
-        double s = 0;//s is the skew, only non-zero if u and v are non-perpendicular.
-        double u = src.width()/2;
-        double v = src.height()/2;
-        intrinsic.put(0,0,a);
-        intrinsic.put(1,0,s);
-        intrinsic.put(2,0,u);
-        intrinsic.put(0,1,0);
-        intrinsic.put(1,1,a);
-        intrinsic.put(2,1,v);
-        intrinsic.put(0,2,0);
-        intrinsic.put(1,2,0);
-        intrinsic.put(2,2,1);
+
+//        if(intrinsic==null){
+            //Initialize if uninitialized
+            mDistortionCoefficients = new MatOfDouble();
+            intrinsic = new Mat(3, 3, CvType.CV_32FC1);
+            double f = 100*CameraActivity.seek;//focal length of camera
+            double k = 50;
+            double a = k*f; //scale factor
+            double s = 0;//s is the skew, only non-zero if u and v are non-perpendicular.
+            double u = src.width()/2;
+            double v = src.height()/2;
+            intrinsic.put(0,0,a);
+            intrinsic.put(1,0,s);
+            intrinsic.put(2,0,u);
+            intrinsic.put(0,1,0);
+            intrinsic.put(1,1,a);
+            intrinsic.put(2,1,v);
+            intrinsic.put(0,2,0);
+            intrinsic.put(1,2,0);
+            intrinsic.put(2,2,1);
+//        }
         int w = src.width();
         int h = src.height();
-        int mFlags2 = Calib3d.CALIB_FIX_PRINCIPAL_POINT +
-                Calib3d.CALIB_ZERO_TANGENT_DIST +
-                Calib3d.CALIB_FIX_ASPECT_RATIO +
-                Calib3d.CALIB_FIX_K4 +
+        int mFlags2 =
+                Calib3d.CALIB_FIX_PRINCIPAL_POINT +
+//                Calib3d.CALIB_ZERO_TANGENT_DIST +
+//                Calib3d.CALIB_FIX_ASPECT_RATIO +
+//                Calib3d.CALIB_FIX_K4 +
                 Calib3d.CALIB_FIX_K5;
 
         ArrayList<Mat> points3D = new ArrayList<>();
@@ -604,9 +615,11 @@ public class ImageParser {
         points2D.add(a2);
 
         //calibrateCamera(objectPoints, imagePoints, imageSize, cameraMatrix, distCoeffs, rvecs, tvecs, flags)
-        Calib3d.calibrateCamera(points3D, points2D, new Size(w,h), intrinsic, mDistortionCoefficients, rvecs, tvecs);
+        Calib3d.calibrateCamera(points3D, points2D, new Size(w,h), intrinsic, mDistortionCoefficients, rvecs, tvecs,mFlags2);
 //        Logg.d("OUTPUT4", "" + Arrays.toString(tvecs.get(0).get(0, 0)));
         rect.print();
+
+        Logg.d("REEACH3", " : " + (System.currentTimeMillis() - start) + " ms");
 
 
         //Check if those values are correct
@@ -630,21 +643,23 @@ public class ImageParser {
 
 
         //Remove white color from screen
+        srcGryColor = src.clone();
         List<MatOfPoint> list = new ArrayList<>();
         list.add(screenContour);
-        Imgproc.fillPoly(srcGryColor, list, new Scalar(0,0,0));
+        Imgproc.fillPoly(srcGryColor, list, new Scalar(0, 0, 0));
+        Logg.d("REEACH5", " : " + (System.currentTimeMillis() - start) + " ms");
 
         //Create mapper that will be displayed inside screen
-        Mat onlyGrid = new Mat(srcGryColor.size(),srcGryColor.type());
         Mat srcOverlayWhite = new Mat(srcGryColor.size(),srcGryColor.type());
         Mat srcOverlayActual = new Mat(srcGryColor.size(),srcGryColor.type());
         List<MatOfPoint> listTemp2 = new ArrayList<>();
         listTemp2.add(screenContour);
         Imgproc.fillPoly(srcOverlayWhite, listTemp2, new Scalar(255, 255, 255));
-        int gridLength = 30;
-        int gridNum = 10;
+        int gridLength = 120;
+        int gridNum = 2;
         for(int p=0;p<gridNum;p++){
 
+            Mat onlyGrid = new Mat(srcGryColor.size(),srcGryColor.type());
             List<Point3> points = new ArrayList<>();
             points.add(new Point3(w, 0, -p*gridLength));
             points.add(new Point3(0, 0, -p*gridLength));
@@ -654,7 +669,7 @@ public class ImageParser {
 
             //Draw using resulting
             int colorShade = 255-(p*255/gridNum);
-            Scalar colorScalar = new Scalar(colorShade,colorShade,colorShade);
+            Scalar colorScalar = new Scalar(colorShade,100,100);
             for(int i=0;i<4;i++){
                 Imgproc.line(onlyGrid, outputRect.lb, outputRect.lt, colorScalar, 1);
                 Imgproc.line(onlyGrid, outputRect.lb, outputRect.rb, colorScalar, 1);
@@ -667,6 +682,33 @@ public class ImageParser {
             Core.bitwise_and(srcOverlayWhite, onlyGrid, temp2);
             Core.add(srcOverlayActual, temp2, srcOverlayActual);
         }
+
+        Logg.d("REEACH6", " : " + (System.currentTimeMillis() - start) + " ms");
+
+        //Draw through grid
+        List<Point3> points = new ArrayList<>();
+        points.add(new Point3(w, 0, 0));
+        points.add(new Point3(0, 0, 0));
+        points.add(new Point3(0, h, 0));
+        points.add(new Point3(w, h, 0));
+        Rectangle outerRect = findCameraPerspectiveOf(points,rvecs.get(0), tvecs.get(0), intrinsic, mDistortionCoefficients);
+
+        List<Point3> points2 = new ArrayList<>();
+        points2.add(new Point3(w, 0, -100));
+        points2.add(new Point3(0, 0, -100));
+        points2.add(new Point3(0, h, -100));
+        points2.add(new Point3(w, h, -100));
+        Rectangle innerRect = findCameraPerspectiveOf(points2,rvecs.get(0), tvecs.get(0), intrinsic, mDistortionCoefficients);
+
+        Scalar colorScalar = new Scalar(255,100,100);
+        Mat onlyGrid = new Mat(srcGryColor.size(),srcGryColor.type());
+        Imgproc.line(onlyGrid, outerRect.lb, innerRect.lb, colorScalar, 1);
+        Imgproc.line(onlyGrid, outerRect.lt, innerRect.lt, colorScalar, 1);
+        Imgproc.line(onlyGrid, outerRect.rb, innerRect.rb, colorScalar, 1);
+        Imgproc.line(onlyGrid, outerRect.rt, innerRect.rt, colorScalar, 1);
+        Mat temp2 = new Mat(srcGryColor.size(),srcGryColor.type());
+        Core.bitwise_and(srcOverlayWhite, onlyGrid, temp2);
+        Core.add(srcOverlayActual, temp2, srcOverlayActual);
 
 
 
