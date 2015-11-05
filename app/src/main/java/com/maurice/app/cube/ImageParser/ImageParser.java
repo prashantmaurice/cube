@@ -13,12 +13,16 @@ import com.maurice.app.cube.MainActivity;
 import com.maurice.app.cube.R;
 import com.maurice.app.cube.utils.Logg;
 
+import org.opencv.calib3d.Calib3d;
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfDouble;
 import org.opencv.core.MatOfPoint;
 import org.opencv.core.MatOfPoint2f;
+import org.opencv.core.MatOfPoint3f;
 import org.opencv.core.Point;
+import org.opencv.core.Point3;
 import org.opencv.core.Rect;
 import org.opencv.core.RotatedRect;
 import org.opencv.core.Scalar;
@@ -550,17 +554,198 @@ public class ImageParser {
 
         Logg.d("CONTOUR", "screen size2 : " + screenContourRect.rows());
 
-
-        //Find homography
-//        Calib3d.findHomography(screenContourRect2F,)
-        
-
+        //=====================
         if(image==null){
             Bitmap bitmap = BitmapFactory.decodeResource(mContext.getResources(), R.drawable.image);
             image = GenUtils.convertBitmapToMat(bitmap);
         }
-        Mat color2 = addImageOnExisting(src, rect, image);
-        if(true) return color2;
+        final Size mPatternSize = new Size(4, 11);
+        final int mCornersSize = (int)(mPatternSize.width * mPatternSize.height);
+        boolean mPatternWasFound = false;
+        MatOfPoint2f mCorners = new MatOfPoint2f();
+        List<Mat> mCornersBuffer = new ArrayList<Mat>();
+        boolean mIsCalibrated = false;
+
+        Mat mCameraMatrix = new Mat();
+        MatOfDouble mDistortionCoefficients = new MatOfDouble();
+        int mFlags;
+        double mRms;
+        double mSquareSize = 0.0181;
+        Size mImageSize;
+        ArrayList<Mat> rvecs = new ArrayList<Mat>();
+        ArrayList<Mat> tvecs = new ArrayList<Mat>();
+        Mat reprojectionErrors = new Mat();
+        ArrayList<Mat> objectPoints = new ArrayList<Mat>();
+        objectPoints.add(Mat.zeros(mCornersSize, 1, CvType.CV_32FC3));
+//        calcBoardCornerPositions(objectPoints.get(0));
+        for (int i = 1; i < mCornersBuffer.size(); i++) {
+            objectPoints.add(objectPoints.get(0));
+        }
+
+        Mat intrinsic = new Mat(3, 3, CvType.CV_32FC1);
+        double f = 100*CameraActivity.seek;//focal length of camera
+        double k = 50;
+        double a = k*f; //scale factor
+        double s = 0;//s is the skew, only non-zero if u and v are non-perpendicular.
+        double u = image.width()/2;
+        double v = image.height()/2;
+        intrinsic.put(0,0,a);
+        intrinsic.put(0,1,s);
+        intrinsic.put(0,2,u);
+        intrinsic.put(1,0,0);
+        intrinsic.put(1,1,a);
+        intrinsic.put(1,2,v);
+        intrinsic.put(2,0,0);
+        intrinsic.put(2,1,0);
+        intrinsic.put(2,2,1);
+        int w = src.width();
+        int h = src.height();
+        int mFlags2 = Calib3d.CALIB_FIX_PRINCIPAL_POINT +
+                Calib3d.CALIB_ZERO_TANGENT_DIST +
+                Calib3d.CALIB_FIX_ASPECT_RATIO +
+                Calib3d.CALIB_FIX_K4 +
+                Calib3d.CALIB_FIX_K5;
+
+        ArrayList<Mat> points3D = new ArrayList<>();
+        Mat a1 = new MatOfPoint3f();
+//        a1.push_back(new MatOfPoint3f(new Point3(rect.lt.x, rect.lt.y, 0)));
+//        a1.push_back(new MatOfPoint3f(new Point3(rect.rt.x, rect.rt.y, 0)));
+//        a1.push_back(new MatOfPoint3f(new Point3(rect.rb.x, rect.rb.y, 0)));
+//        a1.push_back(new MatOfPoint3f(new Point3(rect.lb.x, rect.lb.y, 0)));
+        a1.push_back(new MatOfPoint3f(new Point3(w, 0, 0)));
+        a1.push_back(new MatOfPoint3f(new Point3(0, 0, 0)));
+        a1.push_back(new MatOfPoint3f(new Point3(0, h, 0)));
+        a1.push_back(new MatOfPoint3f(new Point3(w, h, 0)));
+        points3D.add(a1);
+
+        ArrayList<Mat> points2D = new ArrayList<>();
+        Mat a2 = new MatOfPoint2f();
+        a2.push_back(new MatOfPoint2f(new Point(rect.lt.x, rect.lt.y)));
+        a2.push_back(new MatOfPoint2f(new Point(rect.rt.x, rect.rt.y)));
+        a2.push_back(new MatOfPoint2f(new Point(rect.rb.x, rect.rb.y)));
+        a2.push_back(new MatOfPoint2f(new Point(rect.lb.x, rect.lb.y)));
+        points2D.add(a2);
+
+        //calibrateCamera(objectPoints, imagePoints, imageSize, cameraMatrix, distCoeffs, rvecs, tvecs, flags)
+        Calib3d.calibrateCamera(points3D, points2D, src.size(), intrinsic, mDistortionCoefficients, rvecs, tvecs, mFlags2);
+
+        MatOfPoint3f a3 = new MatOfPoint3f();
+        a3.push_back(new MatOfPoint3f(new Point3(w, 0, 0)));
+        a3.push_back(new MatOfPoint3f(new Point3(0, 0, 0)));
+        a3.push_back(new MatOfPoint3f(new Point3(0, h, 0)));
+        a3.push_back(new MatOfPoint3f(new Point3(w, h, 0)));
+        MatOfPoint2f a4 = new MatOfPoint2f();
+
+        //projectPoints(objectPoints, rvec, tvec, cameraMatrix, distCoeffs, imagePoints, jacobian, aspectRatio)
+        Mat jacobian = new Mat();//optional output
+        double aspectRatio = 0;//optional output
+        //projectPoints(MatOfPoint3f objectPoints, Mat rvec, Mat tvec, Mat cameraMatrix, MatOfDouble distCoeffs, MatOfPoint2f imagePoints, Mat jacobian, double aspectRatio)
+
+        Calib3d.projectPoints(a3, rvecs.get(0), tvecs.get(0), intrinsic, mDistortionCoefficients, a4, jacobian, aspectRatio);
+        Logg.d("OUTPUT0", "" + rvecs.size());
+        Logg.d("OUTPUT1", "" + Arrays.toString(a2.get(0,0)));
+        Logg.d("OUTPUT2", ""+Arrays.toString(a4.toArray()));
+
+        ;
+        Rectangle outputRect = new Rectangle(new MatOfPoint(a4.toArray()));
+
+//        Core.gemm(intrinsic, cameraPosition, 1, new Mat(), 0, vec4t);
+//        Core.gemm(vec4t, point, 1, new Mat(), 0, result);
+
+        //==============
+
+
+
+
+
+
+        //Find homography
+//        if(image==null){
+//            Bitmap bitmap = BitmapFactory.decodeResource(mContext.getResources(), R.drawable.image);
+//            image = GenUtils.convertBitmapToMat(bitmap);
+//        }
+//        Point[] imagePoints = new Point[4];
+//        int w = image.width();
+//        int h = image.height();
+//        imagePoints[0] = new Point(w, 0);
+//        imagePoints[1] = new Point(0, 0);
+//        imagePoints[2] = new Point(0, h);
+//        imagePoints[3] = new Point(w, h);
+//        MatOfPoint2f imagePoints2F = new MatOfPoint2f();
+//        imagePoints2F.fromArray(imagePoints);
+//
+//
+//        Mat homography = org.opencv.imgproc.Imgproc.getPerspectiveTransform(screenContourRect2F, imagePoints2F);
+//        Mat intrinsicInverse = new Mat(3, 3, CvType.CV_32FC1);
+//
+//        //Form camera intrinsic matrix
+//        //https://dsp.stackexchange.com/questions/2736/step-by-step-camera-pose-estimation-for-visual-tracking-and-planar-markers
+//        Mat intrinsic = new Mat(3, 3, CvType.CV_32FC1);
+//        double f = 35;//focal length of camera
+//        double k = 10;//pixels per unit distance
+//        double a = k*f; //scale factor
+//        double s = 0;//s is the skew, only non-zero if u and v are non-perpendicular.
+//        double u = image.width()/2;
+//        double v = image.height()/2;
+//        intrinsic.put(0,0,a);
+//        intrinsic.put(0,1,s);
+//        intrinsic.put(0,2,u);
+//        intrinsic.put(1,0,0);
+//        intrinsic.put(1,1,a);
+//        intrinsic.put(1,2,v);
+//        intrinsic.put(2,0,0);
+//        intrinsic.put(2,1,0);
+//        intrinsic.put(2,2,1);
+//
+//
+//
+//        Core.invert(intrinsic, intrinsicInverse);
+//        intrinsicInverse.convertTo(intrinsicInverse, CvType.CV_32FC1);
+//        homography.convertTo(homography, CvType.CV_32FC1);
+//// compute H respect the intrinsics
+//        Core.gemm(intrinsicInverse, homography, 1, new Mat(), 0, homography);
+//
+//        Mat pose = cameraPoseFromHomography(homography);
+//
+//        Mat origin3D = new Mat(3, 1, CvType.CV_32FC1);
+//        origin3D.put(0,0,0);
+//        origin3D.put(1,0,0);
+//        origin3D.put(2, 0, 0);
+//        Mat origin2D = intrinsic.mul(pose).mul(origin3D);
+//        Logg.d("origin2D",origin2D.toString());
+
+
+
+
+//        Mat H = Calib3d.findHomography(screenContourRect2F, imagePoints2F);
+
+
+//        Mat srcGry2 = src.clone();
+//        Mat srcGryColor2 = src.clone();//used for overlaying stuff
+//        Imgproc.cvtColor(src, srcGry2, Imgproc.COLOR_RGB2GRAY);
+//        Imgproc.cvtColor(srcGry2, srcGryColor2, Imgproc.COLOR_GRAY2BGR);
+//        Mat srcGry3 = image.clone();
+//        Mat srcGryColor3 = image.clone();//used for overlaying stuff
+//        Imgproc.cvtColor(image, srcGry3, Imgproc.COLOR_RGB2GRAY);
+//        Imgproc.cvtColor(srcGry3, srcGryColor3, Imgproc.COLOR_GRAY2BGR);
+//        Mat color2 = addImageOnExisting(srcGryColor2, rect, image);
+//        Mat color2 = addImageOnExisting(srcGryColor2, outputRect, image);
+
+
+//        Mat color5 = new Mat();
+//        Imgproc.cvtColor(srcGry, color5, Imgproc.COLOR_GRAY2BGR);
+        Scalar colorScalar = new Scalar(0,200,100);
+        for(int i=0;i<4;i++){
+            Imgproc.line(srcGryColor, outputRect.lb, outputRect.lt, colorScalar, 2);
+            Imgproc.line(srcGryColor, outputRect.lb, outputRect.rb, colorScalar, 2);
+            Imgproc.line(srcGryColor, outputRect.rb, outputRect.rt, colorScalar, 2);
+            Imgproc.line(srcGryColor, outputRect.rt, outputRect.lt, colorScalar, 2);
+        }
+//        MainActivity.setDebugImage(color5, 5);
+        if(true) return srcGryColor;
+
+
+//        if(true) return color2;
 //        addImageOnExisting()
 
 
@@ -572,6 +757,41 @@ public class ImageParser {
 
 
         return null;
+    }
+
+    private Mat cameraPoseFromHomography(Mat h) {
+        Log.d("DEBUG", "cameraPoseFromHomography: homography : " + h.toString());
+
+        Mat pose = Mat.eye(3, 4, CvType.CV_32FC1);  // 3x4 matrix, the camera pose
+        float norm1 = (float) Core.norm(h.col(0));
+        float norm2 = (float) Core.norm(h.col(1));
+        float tnorm = (norm1 + norm2) / 2.0f;       // Normalization value
+
+        Mat normalizedTemp = new Mat();
+        Core.normalize(h.col(0), normalizedTemp);
+        normalizedTemp.convertTo(normalizedTemp, CvType.CV_32FC1);
+        normalizedTemp.copyTo(pose.col(0));
+
+        Core.normalize(h.col(1), normalizedTemp);
+        normalizedTemp.convertTo(normalizedTemp, CvType.CV_32FC1);
+        normalizedTemp.copyTo(pose.col(1));
+
+        Mat p3 = pose.col(0).cross(pose.col(1));
+        p3.copyTo(pose.col(2));
+
+        Mat temp = h.col(2);
+//        double[] buffer = new double[3];
+//        h.col(2).get(0, 0, buffer);
+        pose.put(0, 3, mutiplyArr(h.get(0,2),1 / tnorm));
+        pose.put(1, 3, mutiplyArr(h.get(1,2),1 / tnorm));
+        pose.put(2, 3, mutiplyArr(h.get(2,2),1 / tnorm));
+
+        return pose;
+    }
+    double[] mutiplyArr(double[] arr, double scalar){
+        double[] arr2 = new double[arr.length];
+        for(int i=0;i<arr.length;i++) arr2[i] = arr[i]*scalar;
+        return arr2;
     }
 
 
