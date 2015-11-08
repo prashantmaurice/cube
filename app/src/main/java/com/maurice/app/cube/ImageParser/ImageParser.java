@@ -15,6 +15,7 @@ import com.maurice.app.cube.utils.Logg;
 
 import org.opencv.calib3d.Calib3d;
 import org.opencv.core.Core;
+import org.opencv.core.CvException;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfDouble;
@@ -33,9 +34,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 
 /**
@@ -68,6 +67,7 @@ public class ImageParser {
     Mat image;//Image to be printed on screen
     Mat intrinsic;
     MatOfDouble mDistortionCoefficients;
+    Rectangle averageRectangle;
 
 
     private ImageParser(Context context){
@@ -93,6 +93,7 @@ public class ImageParser {
         Logg.d("TIME", "B1 : " + (System.currentTimeMillis() - start) + " ms");
 
         //Apply Transformations
+
         mat = processMat(mat);
 
         Logg.d("TIME", "Main Processing completed in " + (System.currentTimeMillis() - start) + " ms");
@@ -101,7 +102,7 @@ public class ImageParser {
         return GenUtils.convertMatToBitmap(mat);
     }
 
-    public Mat processMat(Mat src) throws ImageProcessException{
+    public Mat processMat(Mat src) throws ImageProcessException,CvException{
         int width = 864;
         int height = 480;
 
@@ -182,7 +183,7 @@ public class ImageParser {
 //        return wrapPerspectiveCustom(colorPic, new Rectangle(100));
     }
 
-    private Mat getProcessedMat(Mat src) throws ImageProcessException{
+    private Mat getProcessedMat(Mat src) throws ImageProcessException,CvException{
         double units = (float) src.width()/200;
         Logg.d(TAG, "Image size units : " + units);
 
@@ -203,8 +204,12 @@ public class ImageParser {
 //        Core.bitwise_and(src,mask, src);
 //        if(true)return mask;
 
+        try {
+            if(true) return findMarkers(src);
+        }catch (CvException e){
+            return src;
+        }
 
-        if(true) return findMarkers(src);
 
 //        if(true) return findFromWhiteMarkers(src);
 
@@ -495,22 +500,25 @@ public class ImageParser {
         return srcBin;
     }
 
-    private Mat findMarkers(Mat src) {
+    static Mat srcGry, srcGryColor,srcBin,hierarchy;
+    static List<MatOfPoint> contoursList;
+
+    private Mat findMarkers(Mat src) throws CvException {
         long start = System.currentTimeMillis();
 
         //Find gray image
-        Mat srcGry = src.clone();
-        Mat srcGryColor = src.clone();//used for overlaying stuff
+        srcGry = src.clone();
+        srcGryColor = src.clone();//used for overlaying stuff
         Imgproc.cvtColor(src, srcGry, Imgproc.COLOR_RGB2GRAY);
         Imgproc.cvtColor(srcGry, srcGryColor, Imgproc.COLOR_GRAY2BGR);
 
         //Find binary image
-        Mat srcBin = srcGry.clone();
+        srcBin = srcGry.clone();
         Imgproc.threshold(srcGry, srcBin, 255 * 0.5, 255, Imgproc.THRESH_BINARY);
 
         //Find contours
-        Mat hierarchy = srcGry.clone();
-        List<MatOfPoint> contoursList = new ArrayList<>() ;
+        hierarchy = srcGry.clone();
+        contoursList = new ArrayList<>() ;
 //        Imgproc.CV_RETR_TREE ==3
         //Imgproc.CV_CHAIN_APPROX_SIMPLE ==2
         Imgproc.findContours(srcBin, contoursList, hierarchy, 3, 2, new Point(0, 0));
@@ -518,20 +526,15 @@ public class ImageParser {
 
 
         //Find areas of contours
-        final Map<MatOfPoint, Double> areas = new HashMap<>();
-        for(MatOfPoint matOfPoint : contoursList){
-            areas.put(matOfPoint, Imgproc.contourArea(matOfPoint));
-        }
-
-        //Find biggest contour
-        Collections.sort(contoursList, new Comparator<MatOfPoint>() {
-            @Override
-            public int compare(MatOfPoint lhs, MatOfPoint rhs) {
-                if(areas.get(lhs).equals(areas.get(rhs))) return 0;
-                return (areas.get(lhs)<areas.get(rhs))?1:-1;
-            }
-        });
+        double highestArea = 0;
         MatOfPoint screenContour = contoursList.get(0);
+        for(MatOfPoint matOfPoint : contoursList){
+            double area = Imgproc.contourArea(matOfPoint);
+            if(area>highestArea){
+                screenContour = matOfPoint;
+                highestArea = area;
+            }
+        }
         Logg.d("CONTOUR","screen size : "+screenContour.rows());
 
 
@@ -548,6 +551,12 @@ public class ImageParser {
 
         //Find rectangle and draw
         Rectangle rect = new Rectangle(screenContourRect);
+
+        //Reduce noise
+        if(averageRectangle==null) averageRectangle = rect;
+        double percent = 0.1;//retention of old values
+        rect = averageRectangle.mul(percent).add(rect.mul(1-percent));
+
         Scalar color = new Scalar(255, 0,0);
         for(int i=0;i<4;i++){
             Imgproc.line(srcGryColor, rect.lb, rect.lt, color, 2);
@@ -555,8 +564,11 @@ public class ImageParser {
             Imgproc.line(srcGryColor, rect.rb, rect.rt, color, 2);
             Imgproc.line(srcGryColor, rect.rt, rect.lt, color, 2);
         }
+        Scalar color3 = new Scalar(255, 255,0);
+        Imgproc.line(srcGryColor, rect.rt, new Point(rect.rt.x,rect.rt.y+1), color3, 2);
 
         Logg.d("REEACH2"," : "+(System.currentTimeMillis()-start)+" ms");
+//        if(true) return srcGryColor;
 
         Logg.d("CONTOUR", "screen size2 : " + screenContourRect.rows());
 
@@ -614,12 +626,13 @@ public class ImageParser {
         a2.push_back(new MatOfPoint2f(new Point(rect.lb.x, rect.lb.y)));
         points2D.add(a2);
 
+        Logg.d("REEACH3", " : " + (System.currentTimeMillis() - start) + " ms");
         //calibrateCamera(objectPoints, imagePoints, imageSize, cameraMatrix, distCoeffs, rvecs, tvecs, flags)
         Calib3d.calibrateCamera(points3D, points2D, new Size(w,h), intrinsic, mDistortionCoefficients, rvecs, tvecs,mFlags2);
 //        Logg.d("OUTPUT4", "" + Arrays.toString(tvecs.get(0).get(0, 0)));
         rect.print();
 
-        Logg.d("REEACH3", " : " + (System.currentTimeMillis() - start) + " ms");
+        Logg.d("REEACH4", " : " + (System.currentTimeMillis() - start) + " ms");
 
 
         //Check if those values are correct
@@ -655,8 +668,9 @@ public class ImageParser {
         List<MatOfPoint> listTemp2 = new ArrayList<>();
         listTemp2.add(screenContour);
         Imgproc.fillPoly(srcOverlayWhite, listTemp2, new Scalar(255, 255, 255));
-        int gridLength = 120;
-        int gridNum = 2;
+        int gridLength = 60;
+        int gridNum = 4;
+
         for(int p=0;p<gridNum;p++){
 
             Mat onlyGrid = new Mat(srcGryColor.size(),srcGryColor.type());

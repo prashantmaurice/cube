@@ -40,17 +40,43 @@ public class Rectangle {
     }
     public Rectangle(MatOfPoint matOfPoint){
         if(matOfPoint.rows()==4){
-            this.lt = new Point(matOfPoint.get(0,0)[0],matOfPoint.get(0,0)[1]);
-            this.rt = new Point(matOfPoint.get(1,0)[0],matOfPoint.get(1,0)[1]);
-            this.rb = new Point(matOfPoint.get(2,0)[0],matOfPoint.get(2,0)[1]);
-            this.lb = new Point(matOfPoint.get(3,0)[0],matOfPoint.get(3,0)[1]);
+            //Sort them
+            double minPoint = 10000;
+            int startIndex = 0;
+            for(int i=0;i<4;i++){
+                if(matOfPoint.get(i,0)[0]+matOfPoint.get(i,0)[1]<minPoint){
+                    startIndex = i;
+                    minPoint = matOfPoint.get(i,0)[0]+matOfPoint.get(i,0)[1];
+                }
+            }
+
+
+            this.lt = new Point(matOfPoint.get((startIndex+0)%4,0)[0],matOfPoint.get((startIndex+0)%4,0)[1]);
+            this.lb = new Point(matOfPoint.get((startIndex+1)%4,0)[0],matOfPoint.get((startIndex+1)%4,0)[1]);
+            this.rb = new Point(matOfPoint.get((startIndex+2)%4,0)[0],matOfPoint.get((startIndex+2)%4,0)[1]);
+            this.rt = new Point(matOfPoint.get((startIndex+3)%4,0)[0],matOfPoint.get((startIndex+3)%4,0)[1]);
         }
 
 
 
 
         //sort
-        sortRectangle();
+//        sortRectangle();
+    }
+
+    public Rectangle mul(double value){
+        lt = new Point(value * lt.x,value * lt.y);
+        lb = new Point(value * lb.x,value * lb.y);
+        rb = new Point(value * rb.x,value * rb.y);
+        rt = new Point(value * rt.x,value * rt.y);
+        return this;
+    }
+    public Rectangle add(Rectangle rect){
+        lt = new Point(rect.lt.x + lt.x,rect.lt.y + lt.y);
+        lb = new Point(rect.lb.x + lb.x,rect.lb.y + lb.y);
+        rb = new Point(rect.rb.x + rb.x,rect.rb.y + rb.y);
+        rt = new Point(rect.rt.x + rt.x,rect.rt.y + rt.y);
+        return this;
     }
 
     public void sortRectangle(){

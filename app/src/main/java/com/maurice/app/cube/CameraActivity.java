@@ -17,6 +17,7 @@ import org.opencv.android.CameraBridgeViewBase.CvCameraViewFrame;
 import org.opencv.android.CameraBridgeViewBase.CvCameraViewListener2;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
+import org.opencv.core.CvException;
 import org.opencv.core.Mat;
 
 public class CameraActivity extends Activity implements CvCameraViewListener2 {
@@ -124,6 +125,8 @@ public class CameraActivity extends Activity implements CvCameraViewListener2 {
             return imageParser.processMat(inputFrame.rgba());
         }catch(ImageProcessException e){
             Logg.d("ImageProcessE", "" + e);
+            return inputFrame.rgba();
+        }catch (CvException e){
             return inputFrame.rgba();
         }
 //        Imgproc.cvtColor(inputFrame.rgba(), srcGry, Imgproc.COLOR_RGB2GRAY);
