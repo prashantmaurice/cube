@@ -78,7 +78,7 @@ public class ImageParser {
         if(instance==null) instance = new ImageParser(context);
 //        Bitmap bitmap = BitmapFactory.decodeResource(context.getResources(), R.drawable.image);
 //        Mat imageMat = GenUtils.convertBitmapToMat(bitmap);
-//        gifController = GifController.getInstance(context);
+        gifController = GifController.getInstance(context);
         return instance;
     }
 
@@ -369,8 +369,9 @@ public class ImageParser {
         //Draw image on top
 //        gifController.get(0);
         if(image==null){
-            Bitmap bitmap = BitmapFactory.decodeResource(mContext.getResources(), R.drawable.image);
-            image = GenUtils.convertBitmapToMat(bitmap);
+//            Bitmap bitmap = BitmapFactory.decodeResource(mContext.getResources(), R.drawable.image);
+            image = gifController.get(0);
+//            image = GenUtils.convertBitmapToMat(bitmap);
         }
         Mat color2 = addImageOnExisting(color1, corners, image);
 
@@ -568,7 +569,23 @@ public class ImageParser {
         Imgproc.line(srcGryColor, rect.rt, new Point(rect.rt.x,rect.rt.y+1), color3, 2);
 
         Logg.d("REEACH2"," : "+(System.currentTimeMillis()-start)+" ms");
-//        if(true) return srcGryColor;
+
+//        if(image==null){
+            image = gifController.get();
+//            Bitmap bitmap = BitmapFactory.decodeResource(mContext.getResources(), R.drawable.image);
+//            image = GenUtils.convertBitmapToMat(bitmap);
+//        }
+
+        //Fill image with black
+        List<MatOfPoint> list5 = new ArrayList<>();
+        list5.add(screenContour);
+        Imgproc.fillPoly(src, list5, new Scalar(0, 0, 0));
+
+        //Add image on top
+        Mat color2 = addImageOnExisting(src, rect, image);
+
+        if(true) return color2;
+        if(true) return srcGryColor;
 
         Logg.d("CONTOUR", "screen size2 : " + screenContourRect.rows());
 
@@ -592,7 +609,7 @@ public class ImageParser {
             double u = src.width()/2;
             double v = src.height()/2;
             intrinsic.put(0,0,a);
-            intrinsic.put(1,0,s);
+            intrinsic.put(1,0,s); 
             intrinsic.put(2,0,u);
             intrinsic.put(0,1,0);
             intrinsic.put(1,1,a);
@@ -888,7 +905,8 @@ public class ImageParser {
 //
 //        Imgproc.cvtColor(mask, mask, Imgproc.COLOR_GRAY2BGR);
 //        Core.bitwise_and(img2gray, mask, src);
-        Core.addWeighted(src,0.3,dst,0.3,1,src);
+        Core.add(src, dst, src);
+//        Core.addWeighted(src,0.3,dst,0.3,1,src);
 //        Core.add(src, dst, src);
 
         return src;

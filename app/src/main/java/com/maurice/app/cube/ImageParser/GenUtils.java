@@ -22,7 +22,8 @@ import java.util.Arrays;
  */
 public class GenUtils {
     public static Mat convertBitmapToMat(Bitmap image){
-        Mat mat = new Mat ( image.getHeight(), image.getWidth(), CvType.CV_8U, new Scalar(4));
+        Mat mat = new Mat ( image.getHeight(), image.getWidth(), CvType.CV_8U, new Scalar(3));
+//        Mat mat = new Mat(200,300,CvType.CV_8U);
         Bitmap myBitmap32 = image.copy(Bitmap.Config.ARGB_8888, true);
         Utils.bitmapToMat(myBitmap32, mat);
         return mat;

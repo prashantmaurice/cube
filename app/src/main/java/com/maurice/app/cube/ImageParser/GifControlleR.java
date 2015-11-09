@@ -23,14 +23,12 @@ public class GifController {
     public GifController(Context context){
         long start = System.currentTimeMillis();
 
-        resources.add(R.drawable.monkey1);
-//        resources.add(R.drawable.monkey2);
-//        resources.add(R.drawable.monkey3);
-//        resources.add(R.drawable.monkey4);
-//        resources.add(R.drawable.monkey5);
-//        resources.add(R.drawable.monkey6);
-//        resources.add(R.drawable.monkey7);
-//        resources.add(R.drawable.monkey8);
+        resources.add(R.drawable.bunny0);
+        resources.add(R.drawable.bunny1);
+        resources.add(R.drawable.bunny2);
+        resources.add(R.drawable.bunny3);
+        resources.add(R.drawable.bunny4);
+        resources.add(R.drawable.bunny5);
 //        resources.add(R.drawable.monkey9);
 //        resources.add(R.drawable.monkey10);
 //        resources.add(R.drawable.monkey11);
@@ -41,7 +39,7 @@ public class GifController {
 //        resources.add(R.drawable.monkey16);
 
         for(Integer resId : resources){
-            Bitmap bitmap = BitmapFactory.decodeResource(context.getResources(), R.drawable.sample1);
+            Bitmap bitmap = BitmapFactory.decodeResource(context.getResources(), resId);
             Mat imageMat = GenUtils.convertBitmapToMat(bitmap);
             gifMats.add(imageMat);
         }
@@ -57,7 +55,8 @@ public class GifController {
 
     public Mat get(){
         long time = System.currentTimeMillis();
-        int frame = (int)(time/100)%16;
+        int frame = (int)(time/100)%resources.size();
+        Logg.d("FRAMED","frame : "+frame+" : time : "+time);
         if(frame<0) frame = 0; if(frame>resources.size()-1) frame = resources.size()-1;
         return gifMats.get(frame);
     }

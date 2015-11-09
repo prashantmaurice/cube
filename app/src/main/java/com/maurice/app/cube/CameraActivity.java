@@ -38,6 +38,7 @@ public class CameraActivity extends Activity implements CvCameraViewListener2 {
                 case LoaderCallbackInterface.SUCCESS:
                 {
                     Log.i(TAG, "OpenCV loaded successfully");
+                    if(imageParser==null) imageParser = ImageParser.getInstance(CameraActivity.this);
                     mOpenCvCameraView.enableView();
                 } break;
                 default:
@@ -60,7 +61,6 @@ public class CameraActivity extends Activity implements CvCameraViewListener2 {
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
         setContentView(R.layout.activity_camera);
-        imageParser = ImageParser.getInstance(this);
 
         mOpenCvCameraView = (CameraBridgeViewBase) findViewById(R.id.tutorial1_activity_java_surface_view);
 
@@ -121,6 +121,7 @@ public class CameraActivity extends Activity implements CvCameraViewListener2 {
         //ACTUAL IMAGE PROCESSING BEGINS
 
 //        Mat srcGry = inputFrame.rgba();
+
         try{
             return imageParser.processMat(inputFrame.rgba());
         }catch(ImageProcessException e){
